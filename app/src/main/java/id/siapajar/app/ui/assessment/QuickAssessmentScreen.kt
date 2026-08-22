@@ -1,6 +1,5 @@
 package id.siapajar.app.ui.assessment
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,37 +18,70 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import id.siapajar.app.domain.model.InstrumentType
 import id.siapajar.app.theme.*
-
-data class TaggedStudent(
-    val id: String,
-    val name: String,
-    val avatarUrl: String,
-    val isSelected: Boolean = true
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuickAssessmentScreen(
     onNavigateBack: () -> Unit,
-    onSaveSuccess: () -> Unit
+    onSaveSuccess: () -> Unit,
+    viewModel: AssessmentViewModel = viewModel()
 ) {
-    var selectedInstrument by remember { mutableStateOf(InstrumentType.CATATAN_ANEKDOT) }
-    var notesText by remember { mutableStateOf("") }
-    val taggedStudents = remember {
-        mutableStateListOf(
-            TaggedStudent("1", "Kenzo\nAlvaro", "https://images.unsplash.com/photo-1543332164-6e82f355badc?w=150&auto=format&fit=crop&q=80", true),
-            TaggedStudent("2", "Aisyah\nPutri", "https://images.unsplash.com/photo-1595454223600-91fbdd77e268?w=150&auto=format&fit=crop&q=80", true)
+    val uiState by viewModel.uiState.collectAsState()
+    val scrollState = rememberScrollState()
+    var showStudentPicker by remember { mutableStateOf(false) }
+
+    if (showStudentPicker) {
+        AlertDialog(
+            onDismissRequest = { showStudentPicker = false },
+            title = { Text("Pilih Siswa Terkait", fontWeight = FontWeight.Bold, color = TextPrimary) },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    uiState.availableStudents.forEach { student ->
+                        val isSelected = uiState.selectedStudentIds.contains(student.id)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.toggleStudentSelection(student.id) }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Checkbox(
+                                checked = isSelected,
+                                onCheckedChange = { viewModel.toggleStudentSelection(student.id) },
+                                colors = CheckboxDefaults.colors(checkedColor = EmeraldPrimary)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = student.name,
+                                fontSize = 14.sp,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                color = TextPrimary
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showStudentPicker = false },
+                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
+                ) {
+                    Text("Selesai")
+                }
+            }
         )
     }
-    val scrollState = rememberScrollState()
 
     Scaffold(
         topBar = {
@@ -110,19 +142,28 @@ fun QuickAssessmentScreen(
             ) {
                 Box(modifier = Modifier.padding(16.dp)) {
                     Button(
-                        onClick = onSaveSuccess,
+                        onClick = { viewModel.saveAssessment(onSaveSuccess) },
+                        enabled = !uiState.isLoading,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text(
-                            text = "Simpan Asesmen",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
+                        if (uiState.isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = Color.White,
+                                strokeWidth = 2.5.dp
+                            )
+                        } else {
+                            Text(
+                                text = "Simpan Asesmen",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
                     }
                 }
             }
@@ -136,11 +177,11 @@ fun QuickAssessmentScreen(
                 .verticalScroll(scrollState)
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            // 1. Photo Hero Container (Child playing with blocks)
+            // 1. Photo Hero Container
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(240.dp)
+                    .height(220.dp)
                     .clip(RoundedCornerShape(18.dp))
                     .background(Color(0xFFE2E8F0))
             ) {
@@ -154,7 +195,7 @@ fun QuickAssessmentScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 2. Photo Action Buttons (Ulangi Foto & Tambah Foto)
+            // 2. Photo Action Buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -234,11 +275,11 @@ fun QuickAssessmentScreen(
 
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(InstrumentType.values()) { type ->
-                    val isSelected = type == selectedInstrument
+                    val isSelected = type == uiState.selectedInstrument
                     Surface(
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
-                            .clickable { selectedInstrument = type }
+                            .clickable { viewModel.setInstrument(type) }
                             .border(
                                 width = 1.dp,
                                 color = if (isSelected) EmeraldPrimary else BorderSlate,
@@ -260,20 +301,35 @@ fun QuickAssessmentScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             // 4. Section: Tandai Siswa Terkait
-            Text(
-                text = "Tandai Siswa Terkait",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Tandai Siswa Terkait",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+                Text(
+                    text = "${uiState.selectedStudentIds.size} Dipilih",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = EmeraldPrimary
+                )
+            }
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                taggedStudents.forEach { student ->
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                val taggedList = uiState.availableStudents.filter { uiState.selectedStudentIds.contains(it.id) }
+                items(taggedList) { student ->
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.width(64.dp)
+                        modifier = Modifier
+                            .width(64.dp)
+                            .clickable { viewModel.toggleStudentSelection(student.id) }
                     ) {
                         Box(contentAlignment = Alignment.BottomEnd) {
                             Box(
@@ -285,7 +341,7 @@ fun QuickAssessmentScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 AsyncImage(
-                                    model = student.avatarUrl,
+                                    model = student.photoUrl ?: "https://images.unsplash.com/photo-1595454223600-91fbdd77e268?w=150&auto=format&fit=crop&q=80",
                                     contentDescription = student.name,
                                     contentScale = ContentScale.Crop,
                                     modifier = Modifier.fillMaxSize()
@@ -310,46 +366,48 @@ fun QuickAssessmentScreen(
                         }
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = student.name,
+                            text = student.name.split(" ").take(2).joinToString("\n"),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
                             color = TextPrimary,
                             lineHeight = 14.sp,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            textAlign = TextAlign.Center
                         )
                     }
                 }
 
-                // Add Student Button (Dashed Circle)
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .width(64.dp)
-                        .clickable { }
-                ) {
-                    Box(
+                item {
+                    // Add Student Button (Dashed Circle)
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier
-                            .size(54.dp)
-                            .clip(CircleShape)
-                            .border(1.5.dp, TextMuted.copy(alpha = 0.5f), CircleShape),
-                        contentAlignment = Alignment.Center
+                            .width(64.dp)
+                            .clickable { showStudentPicker = true }
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.PersonAddAlt,
-                            contentDescription = "Tambah Siswa",
-                            tint = TextMuted,
-                            modifier = Modifier.size(22.dp)
+                        Box(
+                            modifier = Modifier
+                                .size(54.dp)
+                                .clip(CircleShape)
+                                .border(1.5.dp, TextMuted.copy(alpha = 0.5f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PersonAddAlt,
+                                contentDescription = "Tambah Siswa",
+                                tint = TextMuted,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Tambah\nSiswa",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = TextMuted,
+                            lineHeight = 14.sp,
+                            textAlign = TextAlign.Center
                         )
                     }
-                    Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "Tambah\nSiswa",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = TextMuted,
-                        lineHeight = 14.sp,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
                 }
             }
 
@@ -379,11 +437,11 @@ fun QuickAssessmentScreen(
                         .padding(14.dp)
                 ) {
                     TextField(
-                        value = notesText,
-                        onValueChange = { notesText = it },
+                        value = uiState.notes,
+                        onValueChange = { viewModel.setNotes(it) },
                         placeholder = {
                             Text(
-                                "Tulis catatan observasi di sini...",
+                                "Tulis catatan observasi anak di sini...",
                                 fontSize = 14.sp,
                                 color = TextMuted
                             )
@@ -404,7 +462,9 @@ fun QuickAssessmentScreen(
                             .align(Alignment.BottomEnd)
                             .clip(CircleShape)
                             .background(MintSurface)
-                            .clickable { },
+                            .clickable {
+                                viewModel.setNotes(uiState.notes + " Menunjukkan kemampuan motorik halus dan konsentrasi tinggi saat menyusun balok.")
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(

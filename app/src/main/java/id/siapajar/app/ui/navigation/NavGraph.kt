@@ -6,10 +6,13 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
+import id.siapajar.app.data.local.TokenManager
 import id.siapajar.app.ui.assessment.QuickAssessmentScreen
 import id.siapajar.app.ui.attendance.AttendanceScreen
+import id.siapajar.app.ui.auth.LoginScreen
 import id.siapajar.app.ui.components.SiapAjarBottomBar
 import id.siapajar.app.ui.home.HomeScreen
 import id.siapajar.app.ui.student.StudentDetailScreen
@@ -18,15 +21,21 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun SiapAjarNavGraph(navController: NavHostController = rememberNavController()) {
+    val context = LocalContext.current
+    val tokenManager = remember { TokenManager.getInstance(context) }
+    val initialDestination = remember {
+        if (tokenManager.isLoggedIn()) Screen.Home.route else Screen.Login.route
+    }
+
     val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentRoute = navBackStackEntry?.destination?.route ?: Screen.Home.route
+    val currentRoute = navBackStackEntry?.destination?.route ?: initialDestination
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
-            // Show bottom bar on Home, Student List, and Student Detail
+            // Show bottom bar only on Home, Student List, and Student Detail
             if (currentRoute == Screen.Home.route || currentRoute == Screen.StudentList.route || currentRoute.startsWith("student_detail")) {
                 SiapAjarBottomBar(
                     currentRoute = currentRoute,
@@ -49,9 +58,20 @@ fun SiapAjarNavGraph(navController: NavHostController = rememberNavController())
     ) { padding ->
         NavHost(
             navController = navController,
-            startDestination = Screen.Home.route,
+            startDestination = initialDestination,
             modifier = Modifier.padding(padding)
         ) {
+            // 0. Login Screen
+            composable(Screen.Login.route) {
+                LoginScreen(
+                    onLoginSuccess = {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Login.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
             // 1. Beranda
             composable(Screen.Home.route) {
                 HomeScreen(
@@ -59,7 +79,12 @@ fun SiapAjarNavGraph(navController: NavHostController = rememberNavController())
                     onNavigateAssessment = { navController.navigate(Screen.QuickAssessment.route) },
                     onGenerateAiSummary = {
                         scope.launch {
-                            snackbarHostState.showSnackbar("⚡ Membuat Rangkuman AI dari data asesmen minggu ini...")
+                            snackbarHostState.showSnackbar("Membuat Rangkuman AI dari data asesmen minggu ini...")
+                        }
+                    },
+                    onLogout = {
+                        navController.navigate(Screen.Login.route) {
+                            popUpTo(0) { inclusive = true }
                         }
                     }
                 )
@@ -72,20 +97,20 @@ fun SiapAjarNavGraph(navController: NavHostController = rememberNavController())
                     onSaveSuccess = {
                         navController.popBackStack()
                         scope.launch {
-                            snackbarHostState.showSnackbar("✅ Asesmen tersimpan secara lokal (Draft Offline)")
+                            snackbarHostState.showSnackbar("Asesmen berhasil disimpan!")
                         }
                     }
                 )
             }
 
-            // 3. Presensi Harian 30 Detik
+            // 3. Presensi Harian
             composable(Screen.Attendance.route) {
                 AttendanceScreen(
                     onNavigateBack = { navController.popBackStack() },
                     onSaveSuccess = {
                         navController.popBackStack()
                         scope.launch {
-                            snackbarHostState.showSnackbar("✅ Presensi berhasil dicatat!")
+                            snackbarHostState.showSnackbar("Presensi harian berhasil disimpan!")
                         }
                     }
                 )

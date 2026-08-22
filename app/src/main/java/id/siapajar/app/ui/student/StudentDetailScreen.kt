@@ -21,6 +21,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import id.siapajar.app.theme.*
 
@@ -29,10 +30,15 @@ import id.siapajar.app.theme.*
 fun StudentDetailScreen(
     studentId: String,
     onNavigateBack: () -> Unit,
-    onNavigateAddAssessment: () -> Unit
+    onNavigateAddAssessment: () -> Unit,
+    viewModel: StudentViewModel = viewModel()
 ) {
-    var selectedFilter by remember { mutableStateOf("Semua Foto") }
-    val filterOptions = listOf("Semua Foto", "Catatan Anekdot", "Hasil Karya", "Foto Berseri")
+    val uiState by viewModel.detailState.collectAsState()
+    val filterOptions = listOf("Semua", "Catatan Anekdot", "Hasil Karya", "Foto Berseri")
+
+    LaunchedEffect(studentId) {
+        viewModel.loadStudentDetail(studentId)
+    }
 
     Scaffold(
         topBar = {
@@ -55,15 +61,6 @@ fun StudentDetailScreen(
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary
-                        )
-                    }
-                },
-                actions = {
-                    IconButton(onClick = {}) {
-                        Icon(
-                            imageVector = Icons.Default.Notifications,
-                            contentDescription = "Notifikasi",
-                            tint = TextSecondary
                         )
                     }
                 },
@@ -124,8 +121,8 @@ fun StudentDetailScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         AsyncImage(
-                            model = "https://images.unsplash.com/photo-1595454223600-91fbdd77e268?w=300&auto=format&fit=crop&q=80",
-                            contentDescription = "Aisyah Putri Azzahra",
+                            model = uiState.avatarUrl,
+                            contentDescription = uiState.studentName,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize()
                         )
@@ -134,7 +131,7 @@ fun StudentDetailScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = "Aisyah Putri Azzahra",
+                        text = uiState.studentName,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
@@ -147,7 +144,7 @@ fun StudentDetailScreen(
                         shape = RoundedCornerShape(14.dp)
                     ) {
                         Text(
-                            text = "TK B1  •  5 Tahun 4 Bulan",
+                            text = "${uiState.classText}  •  ${uiState.ageText}  •  NIS ${uiState.nis}",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
                             color = TextSecondary,
@@ -161,11 +158,11 @@ fun StudentDetailScreen(
                 // 2. Horizontal Filter Chips
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(filterOptions) { option ->
-                        val isSelected = option == selectedFilter
+                        val isSelected = option == uiState.selectedFilter
                         Surface(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(20.dp))
-                                .clickable { selectedFilter = option }
+                                .clickable { viewModel.setFilter(option) }
                                 .border(
                                     width = 1.dp,
                                     color = if (isSelected) EmeraldPrimary else BorderSlate,
@@ -186,9 +183,9 @@ fun StudentDetailScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // 3. Date Header
+                // 3. Section Title
                 Text(
-                    text = "Kamis, 21 Agustus 2026",
+                    text = "Linimasa Asesmen & Capaian (${uiState.totalAssessments} Catatan)",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
@@ -197,208 +194,157 @@ fun StudentDetailScreen(
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
-            // 4. Timeline Card 1: Hasil Karya
-            item {
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    // Timeline indicator (Green dot + vertical line)
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.width(16.dp)
+            // Timeline items
+            if (uiState.timeline.isEmpty()) {
+                // Fallback default timeline preview
+                item {
+                    TimelineItemCard(
+                        type = "Hasil Karya",
+                        badgeColor = EmeraldPrimary,
+                        dotColor = EmeraldPrimary,
+                        photoUrl = "https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&auto=format&fit=crop&q=80",
+                        notes = "Mampu menggunting pola lingkaran dengan rapi dan bercerita tentang karyanya.",
+                        tpText = "TP 3.1 - Motorik Halus & Kreativitas"
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    TimelineItemCard(
+                        type = "Catatan Anekdot",
+                        badgeColor = Color(0xFF2563EB),
+                        dotColor = Color(0xFF2563EB),
+                        photoUrl = null,
+                        notes = "Saat waktu bermain bebas, anak aktif mengajak temannya menyusun balok bersama dan membagi peran membangun menara tinggi.",
+                        tpText = "TP 2.2 - Sosial Emosional & Kolaborasi"
+                    )
+                }
+            } else {
+                items(uiState.timeline) { item ->
+                    val isWorkSample = item.instrumentType.contains("work", ignoreCase = true) || item.instrumentType.contains("karya", ignoreCase = true)
+                    TimelineItemCard(
+                        type = item.instrumentTitle,
+                        badgeColor = if (isWorkSample) EmeraldPrimary else Color(0xFF2563EB),
+                        dotColor = if (isWorkSample) EmeraldPrimary else Color(0xFF2563EB),
+                        photoUrl = item.attachments.firstOrNull()?.url,
+                        notes = item.notes ?: item.activity ?: "Observasi pembelajaran harian.",
+                        tpText = item.tpCode ?: "TP 1.3 - Capaian Pembelajaran"
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TimelineItemCard(
+    type: String,
+    badgeColor: Color,
+    dotColor: Color,
+    photoUrl: String?,
+    notes: String,
+    tpText: String
+) {
+    Row(modifier = Modifier.fillMaxWidth()) {
+        // Timeline indicator (Dot + vertical line)
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.width(16.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(dotColor)
+            )
+            Box(
+                modifier = Modifier
+                    .width(2.dp)
+                    .height(if (photoUrl != null) 250.dp else 130.dp)
+                    .background(BorderSlate)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(10.dp))
+
+        // Card Content
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .border(1.dp, BorderSlate, RoundedCornerShape(14.dp)),
+            color = Color.White
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        color = badgeColor,
+                        shape = RoundedCornerShape(6.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(EmeraldPrimary)
-                        )
-                        Box(
-                            modifier = Modifier
-                                .width(2.dp)
-                                .height(260.dp)
-                                .background(BorderSlate)
+                        Text(
+                            text = type,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                         )
                     }
 
-                    Spacer(modifier = Modifier.width(10.dp))
-
-                    // Card Content
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
-                            .border(1.dp, BorderSlate, RoundedCornerShape(14.dp)),
-                        color = Color.White
+                    IconButton(
+                        onClick = {},
+                        modifier = Modifier.size(24.dp)
                     ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Surface(
-                                    color = EmeraldPrimary,
-                                    shape = RoundedCornerShape(6.dp)
-                                ) {
-                                    Text(
-                                        text = "Hasil Karya",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White,
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                                    )
-                                }
-
-                                IconButton(
-                                    onClick = {},
-                                    modifier = Modifier.size(24.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.MoreVert,
-                                        contentDescription = null,
-                                        tint = TextMuted
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            // Artwork Photo
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(170.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(Color(0xFFF8FAFC))
-                            ) {
-                                AsyncImage(
-                                    model = "https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&auto=format&fit=crop&q=80",
-                                    contentDescription = "Hasil Karya Bunga",
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            Text(
-                                text = "Aisyah mampu menggunting pola lingkaran dengan rapi dan bercerita tentang karyanya.",
-                                fontSize = 13.sp,
-                                color = TextPrimary,
-                                lineHeight = 19.sp
-                            )
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            // TP Pill Tag
-                            Surface(
-                                color = MintSurface,
-                                shape = RoundedCornerShape(8.dp),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, EmeraldLight.copy(alpha = 0.5f))
-                            ) {
-                                Text(
-                                    text = "TP 3.1 - Motorik Halus & Kreativitas",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = EmeraldDark,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                                )
-                            }
-                        }
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = null,
+                            tint = TextMuted
+                        )
                     }
                 }
-                Spacer(modifier = Modifier.height(14.dp))
-            }
 
-            // 5. Timeline Card 2: Catatan Anekdot
-            item {
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    // Timeline indicator (Blue dot + vertical line)
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.width(16.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFF2563EB))
-                        )
-                        Box(
-                            modifier = Modifier
-                                .width(2.dp)
-                                .height(160.dp)
-                                .background(BorderSlate)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(10.dp))
-
-                    // Card Content
-                    Surface(
+                if (photoUrl != null) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
-                            .border(1.dp, BorderSlate, RoundedCornerShape(14.dp)),
-                        color = Color.White
+                            .height(160.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFFF8FAFC))
                     ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Surface(
-                                    color = Color(0xFF2563EB),
-                                    shape = RoundedCornerShape(6.dp)
-                                ) {
-                                    Text(
-                                        text = "Catatan Anekdot",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White,
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                                    )
-                                }
-
-                                IconButton(
-                                    onClick = {},
-                                    modifier = Modifier.size(24.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.MoreVert,
-                                        contentDescription = null,
-                                        tint = TextMuted
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            Text(
-                                text = "Saat waktu bermain bebas, Aisyah terlihat aktif mengajak teman-temannya untuk bermain balok bersama dan membagi tugas membangun istana. Menunjukkan perkembangan sosial-emosional yang positif.",
-                                fontSize = 13.sp,
-                                color = TextPrimary,
-                                lineHeight = 19.sp
-                            )
-
-                            Spacer(modifier = Modifier.height(10.dp))
-
-                            // TP Pill Tag
-                            Surface(
-                                color = Color(0xFFEFF6FF),
-                                shape = RoundedCornerShape(8.dp),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF93C5FD))
-                            ) {
-                                Text(
-                                    text = "TP 2.2 - Sosial Emosional",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color(0xFF1D4ED8),
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                                )
-                            }
-                        }
+                        AsyncImage(
+                            model = photoUrl,
+                            contentDescription = type,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
                     }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text(
+                    text = notes,
+                    fontSize = 13.sp,
+                    color = TextPrimary,
+                    lineHeight = 19.sp
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Surface(
+                    color = MintSurface,
+                    shape = RoundedCornerShape(8.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, EmeraldLight.copy(alpha = 0.5f))
+                ) {
+                    Text(
+                        text = tpText,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = EmeraldDark,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
                 }
             }
         }

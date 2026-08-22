@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import id.siapajar.app.domain.model.AttendanceStatus
 import id.siapajar.app.theme.*
 
@@ -27,42 +28,34 @@ data class StudentAttendanceState(
     val id: String,
     val name: String,
     val nis: String,
-    var status: AttendanceStatus
+    val status: AttendanceStatus
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AttendanceScreen(
     onNavigateBack: () -> Unit,
-    onSaveSuccess: () -> Unit
+    onSaveSuccess: () -> Unit,
+    viewModel: AttendanceViewModel = viewModel()
 ) {
-    val students = remember {
-        mutableStateListOf(
-            StudentAttendanceState("1", "Ahmad Rayhan", "202601", AttendanceStatus.HADIR),
-            StudentAttendanceState("2", "Aisyah Putri", "202602", AttendanceStatus.HADIR),
-            StudentAttendanceState("3", "Kenzo Alvaro", "202603", AttendanceStatus.HADIR),
-            StudentAttendanceState("4", "Bilqis Humaira", "202604", AttendanceStatus.IZIN),
-            StudentAttendanceState("5", "Fathir Rahman", "202605", AttendanceStatus.SAKIT)
-        )
-    }
+    val uiState by viewModel.uiState.collectAsState()
+
+    val hadirCount = uiState.students.count { it.status == AttendanceStatus.HADIR }
+    val sakitCount = uiState.students.count { it.status == AttendanceStatus.SAKIT }
+    val izinCount = uiState.students.count { it.status == AttendanceStatus.IZIN }
+    val alpaCount = uiState.students.count { it.status == AttendanceStatus.ALPA }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Presensi Harian", fontSize = 16.sp, fontWeight = FontWeight.Bold) },
+                title = { Text("Presensi Harian", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextPrimary) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Kembali", tint = TextPrimary)
                     }
                 },
                 actions = {
-                    TextButton(
-                        onClick = {
-                            students.forEachIndexed { index, s ->
-                                students[index] = s.copy(status = AttendanceStatus.HADIR)
-                            }
-                        }
-                    ) {
+                    TextButton(onClick = { viewModel.markAllPresent() }) {
                         Text("Semua Hadir", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = EmeraldPrimary)
                     }
                 },
@@ -77,14 +70,19 @@ fun AttendanceScreen(
                 color = Color.Transparent
             ) {
                 Button(
-                    onClick = { onSaveSuccess() },
+                    onClick = { viewModel.submitAttendance(onSaveSuccess) },
+                    enabled = !uiState.isLoading,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(54.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
                     shape = RoundedCornerShape(14.dp)
                 ) {
-                    Text("Simpan Presensi", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                    } else {
+                        Text("Simpan Presensi", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
                 }
             }
         }
@@ -96,30 +94,39 @@ fun AttendanceScreen(
                 .padding(padding)
                 .padding(horizontal = 16.dp)
         ) {
-            // Summary Stats Pill Header
+            // Date Header
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(vertical = 8.dp)
             ) {
-                val hadirCount = students.count { it.status == AttendanceStatus.HADIR }
-                val izinCount = students.count { it.status == AttendanceStatus.IZIN }
-                val sakitCount = students.count { it.status == AttendanceStatus.SAKIT }
-                val alpaCount = students.count { it.status == AttendanceStatus.ALPA }
-
-                StatBadge("Hadir", hadirCount, StatusHadir)
-                StatBadge("Izin", izinCount, StatusIzin)
-                StatBadge("Sakit", sakitCount, StatusSakit)
-                StatBadge("Alpa", alpaCount, StatusAlpa)
+                Icon(Icons.Default.CalendarToday, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(uiState.currentDateText, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = TextSecondary)
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            // Summary Stats Pill Header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(CardSurface)
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceAround
+            ) {
+                StatBadge("Hadir", hadirCount.toString(), EmeraldDark)
+                StatBadge("Sakit", sakitCount.toString(), Color(0xFF2563EB))
+                StatBadge("Izin", izinCount.toString(), AmberAccent)
+                StatBadge("Alpa", alpaCount.toString(), Color(0xFFDC2626))
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
 
             // Student Attendance List
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
-                contentPadding = PaddingValues(bottom = 20.dp)
+                contentPadding = PaddingValues(bottom = 80.dp)
             ) {
-                items(students) { student ->
+                items(uiState.students) { student ->
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -128,60 +135,39 @@ fun AttendanceScreen(
                         color = CardSurface
                     ) {
                         Row(
-                            modifier = Modifier.padding(12.dp),
+                            modifier = Modifier
+                                .padding(12.dp)
+                                .fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column {
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = student.name,
                                     fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold,
+                                    fontWeight = FontWeight.Bold,
                                     color = TextPrimary
                                 )
                                 Text(
                                     text = "NIS: ${student.nis}",
                                     fontSize = 11.sp,
-                                    color = TextMuted
+                                    color = TextSecondary
                                 )
                             }
 
-                            // Segmented Controls (H, I, S, A)
-                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                AttendanceStatus.values().forEach { statusOption ->
-                                    val isSelected = student.status == statusOption
-                                    val color = when (statusOption) {
-                                        AttendanceStatus.HADIR -> StatusHadir
-                                        AttendanceStatus.IZIN -> StatusIzin
-                                        AttendanceStatus.SAKIT -> StatusSakit
-                                        AttendanceStatus.ALPA -> StatusAlpa
-                                    }
-
-                                    Box(
-                                        modifier = Modifier
-                                            .size(34.dp)
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(if (isSelected) color else CanvasBackground)
-                                            .border(
-                                                width = 1.dp,
-                                                color = if (isSelected) color else BorderSlate,
-                                                shape = RoundedCornerShape(8.dp)
-                                            )
-                                            .clickable {
-                                                val index = students.indexOf(student)
-                                                if (index != -1) {
-                                                    students[index] = student.copy(status = statusOption)
-                                                }
-                                            },
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = statusOption.code,
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (isSelected) Color.White else TextSecondary
-                                        )
-                                    }
+                            // Status Options: H, S, I, A
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                AttendanceChip("H", student.status == AttendanceStatus.HADIR, EmeraldPrimary) {
+                                    viewModel.updateStatus(student.id, AttendanceStatus.HADIR)
+                                }
+                                AttendanceChip("S", student.status == AttendanceStatus.SAKIT, Color(0xFF2563EB)) {
+                                    viewModel.updateStatus(student.id, AttendanceStatus.SAKIT)
+                                }
+                                AttendanceChip("I", student.status == AttendanceStatus.IZIN, AmberAccent) {
+                                    viewModel.updateStatus(student.id, AttendanceStatus.IZIN)
+                                }
+                                AttendanceChip("A", student.status == AttendanceStatus.ALPA, Color(0xFFDC2626)) {
+                                    viewModel.updateStatus(student.id, AttendanceStatus.ALPA)
                                 }
                             }
                         }
@@ -193,18 +179,34 @@ fun AttendanceScreen(
 }
 
 @Composable
-private fun RowScope.StatBadge(label: String, count: Int, color: Color) {
-    Surface(
-        modifier = Modifier.weight(1f),
-        color = color.copy(alpha = 0.12f),
-        shape = RoundedCornerShape(10.dp)
+private fun StatBadge(label: String, value: String, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(text = value, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = color)
+        Text(text = label, fontSize = 11.sp, color = TextSecondary)
+    }
+}
+
+@Composable
+private fun AttendanceChip(
+    code: String,
+    isSelected: Boolean,
+    activeColor: Color,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(34.dp)
+            .clip(CircleShape)
+            .background(if (isSelected) activeColor else CanvasBackground)
+            .border(1.dp, if (isSelected) activeColor else BorderSlate, CircleShape)
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
     ) {
-        Column(
-            modifier = Modifier.padding(vertical = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(text = count.toString(), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = color)
-            Text(text = label, fontSize = 10.sp, fontWeight = FontWeight.Medium, color = color)
-        }
+        Text(
+            text = code,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = if (isSelected) Color.White else TextSecondary
+        )
     }
 }

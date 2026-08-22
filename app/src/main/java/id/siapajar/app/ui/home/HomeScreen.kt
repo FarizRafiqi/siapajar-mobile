@@ -9,13 +9,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CheckCircleOutline
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,16 +21,44 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import id.siapajar.app.domain.model.TodayAgenda
+import androidx.lifecycle.viewmodel.compose.viewModel
 import id.siapajar.app.theme.*
 
 @Composable
 fun HomeScreen(
     onNavigateAttendance: () -> Unit,
     onNavigateAssessment: () -> Unit,
-    onGenerateAiSummary: () -> Unit
+    onGenerateAiSummary: () -> Unit,
+    onLogout: () -> Unit = {},
+    viewModel: HomeViewModel = viewModel()
 ) {
+    val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
+    var showLogoutDialog by remember { mutableStateOf(false) }
+
+    if (showLogoutDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutDialog = false },
+            title = { Text("Konfirmasi Keluar", fontWeight = FontWeight.Bold, color = TextPrimary) },
+            text = { Text("Apakah Anda yakin ingin keluar dari akun guru ini?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showLogoutDialog = false
+                        viewModel.logout(onLogout)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626))
+                ) {
+                    Text("Ya, Keluar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("Batal", color = TextSecondary)
+                }
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -48,16 +73,14 @@ fun HomeScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "Selamat Pagi, Bu Siti",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        text = "Selamat Datang,",
+                        fontSize = 13.sp,
+                        color = TextSecondary
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    // Sync Status Badge
                     Surface(
                         color = MintSurface,
                         shape = RoundedCornerShape(12.dp)
@@ -83,7 +106,14 @@ fun HomeScreen(
                     }
                 }
 
-                // Class selector dropdown pill
+                Text(
+                    text = uiState.teacherName,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+
+                // Class selector & school pill
                 Surface(
                     color = CardSurface,
                     shape = RoundedCornerShape(16.dp),
@@ -95,27 +125,31 @@ fun HomeScreen(
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Icon(
+                            imageVector = Icons.Default.School,
+                            contentDescription = null,
+                            tint = EmeraldPrimary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Kelas: TK B1 (Al-Kautsar)",
+                            text = "${uiState.activeClassName} • ${uiState.schoolName}",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
                             color = TextSecondary
-                        )
-                        Icon(
-                            imageVector = Icons.Default.KeyboardArrowDown,
-                            contentDescription = null,
-                            tint = TextMuted,
-                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }
             }
 
-            IconButton(onClick = {}) {
+            IconButton(
+                onClick = { showLogoutDialog = true },
+                colors = IconButtonDefaults.iconButtonColors(contentColor = TextSecondary)
+            ) {
                 Icon(
-                    imageVector = Icons.Default.Notifications,
-                    contentDescription = "Notifikasi",
-                    tint = TextSecondary
+                    imageVector = Icons.Outlined.Logout,
+                    contentDescription = "Keluar Akun",
+                    tint = Color(0xFFEF4444)
                 )
             }
         }
@@ -140,7 +174,7 @@ fun HomeScreen(
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
-                        text = "Minggu 3 • Semester 1",
+                        text = "Agenda & RPPM Aktif",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
                         color = Color.White,
@@ -151,7 +185,7 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 Text(
-                    text = "Topik: Mengenal Tanaman Obat & Apotek Hidup",
+                    text = "Topik: ${uiState.todayAgenda.topicTitle}",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -160,7 +194,7 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = "Kegiatan: Eksplorasi Daun Mint & Menggambar Bentuk Daun",
+                    text = "Kegiatan: ${uiState.todayAgenda.todayActivity}",
                     fontSize = 13.sp,
                     color = Color.White.copy(alpha = 0.9f)
                 )
@@ -171,70 +205,108 @@ fun HomeScreen(
                     color = Color.White.copy(alpha = 0.15f),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text(
-                        text = "🎯 TP 1.3 - Menjaga Kebersihan & Rasa Ingin Tahu",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.TrackChanges,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "${uiState.todayAgenda.targetedTpCode} - ${uiState.todayAgenda.targetedTpTitle}",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color.White
+                        )
+                    }
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 3. Quick Action Card: Presensi Kelas (Full Width, non-redundant)
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .border(1.dp, MintContainer, RoundedCornerShape(16.dp))
-                .clickable { onNavigateAttendance() },
-            color = MintSurface
+        // 3. Quick Action Cards: Catat Asesmen Cepat & Presensi
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            // Catat Asesmen Cepat
+            Surface(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .border(1.dp, EmeraldPrimary.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
+                    .clickable { onNavigateAssessment() },
+                color = CardSurface
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.padding(14.dp)) {
                     Box(
                         modifier = Modifier
-                            .size(44.dp)
-                            .background(EmeraldPrimary, CircleShape),
+                            .size(38.dp)
+                            .background(EmeraldPrimary, RoundedCornerShape(10.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CameraAlt,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "Catat Asesmen",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = "Foto & Anekdot Cepat",
+                        fontSize = 11.sp,
+                        color = TextSecondary
+                    )
+                }
+            }
+
+            // Presensi Cepat
+            Surface(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(16.dp))
+                    .border(1.dp, MintContainer, RoundedCornerShape(16.dp))
+                    .clickable { onNavigateAttendance() },
+                color = MintSurface
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .background(EmeraldDark, RoundedCornerShape(10.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.CheckCircleOutline,
                             contentDescription = null,
                             tint = Color.White,
-                            modifier = Modifier.size(24.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            text = "Catat Presensi Kelas Hari Ini",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = EmeraldDark
-                        )
-                        Text(
-                            text = "18/20 Hadir • 2 Belum Dicatat",
-                            fontSize = 12.sp,
-                            color = TextSecondary
-                        )
-                    }
-                }
-
-                Button(
-                    onClick = onNavigateAttendance,
-                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
-                    shape = RoundedCornerShape(10.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    Text("Buka", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "Presensi Harian",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = EmeraldDark
+                    )
+                    Text(
+                        text = "Ceklis Kehadiran",
+                        fontSize = 11.sp,
+                        color = TextSecondary
+                    )
                 }
             }
         }
@@ -256,13 +328,13 @@ fun HomeScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Status Asesmen Minggu Ini",
+                        text = "Progres Asesmen",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
                     )
                     Text(
-                        text = "18 / 20 Siswa Dinilai",
+                        text = "${uiState.totalRecordedToday} Catatan Tersimpan",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = EmeraldPrimary
@@ -272,22 +344,13 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 LinearProgressIndicator(
-                    progress = { 0.9f },
+                    progress = { 0.85f },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(8.dp)
                         .clip(RoundedCornerShape(4.dp)),
                     color = EmeraldPrimary,
                     trackColor = MintSurface
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Text(
-                    text = "⚠️ 2 Siswa belum ada catatan: Kenzo, Aisyah",
-                    fontSize = 12.sp,
-                    color = AmberAccent,
-                    fontWeight = FontWeight.Medium
                 )
 
                 Spacer(modifier = Modifier.height(14.dp))
@@ -306,7 +369,7 @@ fun HomeScreen(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "⚡ Buat Rangkuman AI",
+                        text = "Buat Rangkuman AI",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
@@ -315,6 +378,6 @@ fun HomeScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(80.dp)) // Padding for bottom bar
+        Spacer(modifier = Modifier.height(80.dp))
     }
 }
