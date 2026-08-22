@@ -7,13 +7,50 @@ import retrofit2.Response
 import retrofit2.http.*
 
 @Serializable
+data class ApiResponse<T>(
+    val status: String,
+    val message: String? = null,
+    val data: T? = null
+)
+
+@Serializable
 data class LoginRequest(val email: String, val password: String)
 
 @Serializable
-data class LoginResponse(val token: String, val teacherName: String, val email: String)
+data class LoginData(
+    val token: String,
+    val user: UserProfileDto
+)
 
 @Serializable
-data class StudentDto(val id: String, val name: String, val nis: String, val photoUrl: String?, val classId: String, val className: String)
+data class UserProfileDto(
+    val id: Int,
+    val fullName: String?,
+    val email: String,
+    val schoolName: String?,
+    val educationLevel: String?,
+    val role: String
+)
+
+@Serializable
+data class ClassDto(
+    val id: String,
+    val name: String,
+    val gradeLevel: Int? = null,
+    val groupContext: String? = null,
+    val studentCount: Int = 0
+)
+
+@Serializable
+data class StudentDto(
+    val id: String,
+    val name: String,
+    val nis: String,
+    val nisn: String? = null,
+    val classId: String,
+    val assessmentCount: Int = 0,
+    val avatarUrl: String? = null
+)
 
 @Serializable
 data class TodayAgendaDto(
@@ -26,6 +63,32 @@ data class TodayAgendaDto(
 )
 
 @Serializable
+data class StudentTimelineDto(
+    val id: String,
+    val instrumentType: String,
+    val instrumentTitle: String,
+    val date: String,
+    val dateText: String,
+    val activity: String? = null,
+    val notes: String? = null,
+    val achievementStatus: String? = null,
+    val tpCode: String? = null,
+    val attachments: List<AttachmentDto> = emptyList()
+)
+
+@Serializable
+data class AttachmentDto(
+    val id: String,
+    val fileName: String,
+    val url: String
+)
+
+@Serializable
+data class QuickCaptureResponse(
+    val assessmentIds: List<String>
+)
+
+@Serializable
 data class AttendanceSubmitRequest(
     val date: String,
     val classId: String,
@@ -33,27 +96,38 @@ data class AttendanceSubmitRequest(
 )
 
 @Serializable
-data class AttendanceItemDto(val studentId: String, val status: String, val notes: String?)
+data class AttendanceItemDto(
+    val studentId: String,
+    val status: String,
+    val notes: String? = null
+)
 
 interface SiapAjarApiService {
     @POST("api/v1/auth/login")
-    suspend fun login(@Body req: LoginRequest): Response<LoginResponse>
+    suspend fun login(@Body req: LoginRequest): Response<ApiResponse<LoginData>>
+
+    @GET("api/v1/classes")
+    suspend fun getClasses(): Response<ApiResponse<List<ClassDto>>>
 
     @GET("api/v1/classes/{id}/students")
-    suspend fun getStudents(@Path("id") classId: String): Response<List<StudentDto>>
+    suspend fun getStudents(@Path("id") classId: String): Response<ApiResponse<List<StudentDto>>>
 
     @GET("api/v1/classes/{id}/today-agenda")
-    suspend fun getTodayAgenda(@Path("id") classId: String): Response<TodayAgendaDto>
+    suspend fun getTodayAgenda(@Path("id") classId: String): Response<ApiResponse<TodayAgendaDto>>
+
+    @GET("api/v1/students/{id}/timeline")
+    suspend fun getStudentTimeline(@Path("id") studentId: String): Response<ApiResponse<List<StudentTimelineDto>>>
 
     @Multipart
     @POST("api/v1/assessments/quick-capture")
     suspend fun uploadAssessment(
         @Part photo: MultipartBody.Part?,
+        @Part("classId") classId: RequestBody,
         @Part("studentIds") studentIds: RequestBody,
         @Part("instrumentType") instrumentType: RequestBody,
         @Part("notes") notes: RequestBody
-    ): Response<Unit>
+    ): Response<ApiResponse<QuickCaptureResponse>>
 
     @POST("api/v1/attendances/quick-submit")
-    suspend fun submitAttendance(@Body req: AttendanceSubmitRequest): Response<Unit>
+    suspend fun submitAttendance(@Body req: AttendanceSubmitRequest): Response<ApiResponse<Unit>>
 }

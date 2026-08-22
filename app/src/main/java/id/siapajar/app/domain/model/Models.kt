@@ -54,10 +54,10 @@ data class Attendance(
 )
 
 data class TodayAgenda(
-    val weekNumber: Int,
-    val semesterNumber: Int,
-    val topicTitle: String,
-    val todayActivity: String,
-    val targetedTpCode: String,
-    val targetedTpTitle: String
+    val weekNumber: Int = 3,
+    val semesterNumber: Int = 1,
+    val topicTitle: String = "Mengenal Tanaman Obat & Apotek Hidup",
+    val todayActivity: String = "Eksplorasi Daun Mint & Menggambar Bentuk Daun",
+    val targetedTpCode: String = "TP 1.3",
+    val targetedTpTitle: String = "Menjaga Kebersihan & Rasa Ingin Tahu"
 )
