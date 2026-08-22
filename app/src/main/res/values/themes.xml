@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.SiapAjarMobile" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@color/primary_emerald</item>
+        <item name="android:navigationBarColor">@color/canvas_slate</item>
+    </style>
+</resources>
