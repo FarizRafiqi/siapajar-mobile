@@ -3,11 +3,11 @@ package id.siapajar.app.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.outlined.Assignment
+import androidx.compose.material.icons.outlined.Group
+import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -27,103 +28,102 @@ fun SiapAjarBottomBar(
     onNavigateAssessment: () -> Unit,
     onNavigateStudents: () -> Unit
 ) {
-    Box(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(84.dp),
-        contentAlignment = Alignment.BottomCenter
+            .height(68.dp)
+            .shadow(elevation = 12.dp),
+        color = Color.White
     ) {
-        // Bottom Bar Background
-        Surface(
+        Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .height(64.dp)
-                .shadow(elevation = 8.dp),
-            color = CardSurface,
-            tonalElevation = 2.dp
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.SpaceAround,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Left: Beranda
-                val isHomeActive = currentRoute == "home"
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .clickable { onNavigateHome() }
-                        .padding(horizontal = 24.dp, vertical = 8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Home,
-                        contentDescription = "Beranda",
-                        tint = if (isHomeActive) EmeraldPrimary else TextMuted,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Text(
-                        text = "Beranda",
-                        fontSize = 12.sp,
-                        fontWeight = if (isHomeActive) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (isHomeActive) EmeraldPrimary else TextMuted
-                    )
-                }
+            // 1. Beranda Tab
+            BottomNavItem(
+                label = "Beranda",
+                icon = Icons.Outlined.Home,
+                isActive = currentRoute == "home",
+                onClick = onNavigateHome
+            )
 
-                Spacer(modifier = Modifier.width(72.dp)) // Space for Central FAB
+            // 2. Asesmen Tab
+            BottomNavItem(
+                label = "Asesmen",
+                icon = Icons.Outlined.Assignment,
+                isActive = currentRoute == "quick_assessment",
+                onClick = onNavigateAssessment
+            )
 
-                // Right: Siswa
-                val isStudentsActive = currentRoute.startsWith("student")
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .clickable { onNavigateStudents() }
-                        .padding(horizontal = 24.dp, vertical = 8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Groups,
-                        contentDescription = "Siswa",
-                        tint = if (isStudentsActive) EmeraldPrimary else TextMuted,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Text(
-                        text = "Siswa",
-                        fontSize = 12.sp,
-                        fontWeight = if (isStudentsActive) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (isStudentsActive) EmeraldPrimary else TextMuted
-                    )
-                }
+            // 3. Siswa Tab
+            BottomNavItem(
+                label = "Siswa",
+                icon = Icons.Outlined.Group,
+                isActive = currentRoute == "student_list" || currentRoute.startsWith("student_detail"),
+                onClick = onNavigateStudents
+            )
+        }
+    }
+}
+
+@Composable
+private fun BottomNavItem(
+    label: String,
+    icon: ImageVector,
+    isActive: Boolean,
+    onClick: () -> Unit
+) {
+    if (isActive) {
+        // Active Pill Style (as shown in Stitch Screenshot 2: Filled Emerald rounded container)
+        Box(
+            modifier = Modifier
+                .height(42.dp)
+                .clip(RoundedCornerShape(22.dp))
+                .background(EmeraldPrimary)
+                .clickable { onClick() }
+                .padding(horizontal = 18.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = Color.White,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = label,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
             }
         }
-
-        // Central Elevated FAB: Asesmen
+    } else {
+        // Inactive Icon + Text Stack
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
-                .align(Alignment.TopCenter)
-                .offset(y = (-4).dp)
+                .clip(RoundedCornerShape(12.dp))
+                .clickable { onClick() }
+                .padding(horizontal = 14.dp, vertical = 6.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .shadow(elevation = 6.dp, shape = CircleShape)
-                    .clip(CircleShape)
-                    .background(EmeraldPrimary)
-                    .clickable { onNavigateAssessment() },
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PhotoCamera,
-                    contentDescription = "Asesmen Foto",
-                    tint = Color.White,
-                    modifier = Modifier.size(28.dp)
-                )
-            }
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = TextMuted,
+                modifier = Modifier.size(22.dp)
+            )
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = "Asesmen",
+                text = label,
                 fontSize = 11.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = EmeraldPrimary,
-                modifier = Modifier.padding(top = 2.dp)
+                fontWeight = FontWeight.Medium,
+                color = TextMuted
             )
         }
     }

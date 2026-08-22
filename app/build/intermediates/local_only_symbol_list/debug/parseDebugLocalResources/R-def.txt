@@ -1,0 +1,11 @@
+R_DEF: Internal format may change without notice
+local
+color accent_amber
+color canvas_slate
+color primary_dark
+color primary_emerald
+color primary_light
+color surface_mint
+color text_slate
+string app_name
+style Theme.SiapAjarMobile

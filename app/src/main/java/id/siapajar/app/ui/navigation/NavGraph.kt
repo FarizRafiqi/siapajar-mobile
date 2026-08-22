@@ -13,6 +13,7 @@ import id.siapajar.app.ui.attendance.AttendanceScreen
 import id.siapajar.app.ui.components.SiapAjarBottomBar
 import id.siapajar.app.ui.home.HomeScreen
 import id.siapajar.app.ui.student.StudentDetailScreen
+import id.siapajar.app.ui.student.StudentListScreen
 import kotlinx.coroutines.launch
 
 @Composable
@@ -25,8 +26,8 @@ fun SiapAjarNavGraph(navController: NavHostController = rememberNavController())
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
-            // Show bottom bar only on main screens (Home & Student List)
-            if (currentRoute == Screen.Home.route || currentRoute.startsWith("student_detail")) {
+            // Show bottom bar on Home, Student List, and Student Detail
+            if (currentRoute == Screen.Home.route || currentRoute == Screen.StudentList.route || currentRoute.startsWith("student_detail")) {
                 SiapAjarBottomBar(
                     currentRoute = currentRoute,
                     onNavigateHome = {
@@ -38,7 +39,9 @@ fun SiapAjarNavGraph(navController: NavHostController = rememberNavController())
                         navController.navigate(Screen.QuickAssessment.route)
                     },
                     onNavigateStudents = {
-                        navController.navigate(Screen.StudentDetail.createRoute("1"))
+                        navController.navigate(Screen.StudentList.route) {
+                            popUpTo(Screen.StudentList.route) { inclusive = true }
+                        }
                     }
                 )
             }
@@ -49,6 +52,7 @@ fun SiapAjarNavGraph(navController: NavHostController = rememberNavController())
             startDestination = Screen.Home.route,
             modifier = Modifier.padding(padding)
         ) {
+            // 1. Beranda
             composable(Screen.Home.route) {
                 HomeScreen(
                     onNavigateAttendance = { navController.navigate(Screen.Attendance.route) },
@@ -60,6 +64,8 @@ fun SiapAjarNavGraph(navController: NavHostController = rememberNavController())
                     }
                 )
             }
+
+            // 2. Catat Asesmen Kegiatan
             composable(Screen.QuickAssessment.route) {
                 QuickAssessmentScreen(
                     onNavigateBack = { navController.popBackStack() },
@@ -71,6 +77,8 @@ fun SiapAjarNavGraph(navController: NavHostController = rememberNavController())
                     }
                 )
             }
+
+            // 3. Presensi Harian 30 Detik
             composable(Screen.Attendance.route) {
                 AttendanceScreen(
                     onNavigateBack = { navController.popBackStack() },
@@ -82,11 +90,25 @@ fun SiapAjarNavGraph(navController: NavHostController = rememberNavController())
                     }
                 )
             }
+
+            // 4. Daftar Siswa
+            composable(Screen.StudentList.route) {
+                StudentListScreen(
+                    onSelectStudent = { studentId ->
+                        navController.navigate(Screen.StudentDetail.createRoute(studentId))
+                    }
+                )
+            }
+
+            // 5. Profil & Portofolio Siswa (Detail)
             composable(Screen.StudentDetail.route) { backStackEntry ->
                 val studentId = backStackEntry.arguments?.getString("studentId") ?: "1"
                 StudentDetailScreen(
                     studentId = studentId,
-                    onNavigateBack = { navController.popBackStack() }
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateAddAssessment = {
+                        navController.navigate(Screen.QuickAssessment.route)
+                    }
                 )
             }
         }

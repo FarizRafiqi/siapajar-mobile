@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="accent_amber">#F59E0B</color>
+    <color name="canvas_slate">#F8FAFC</color>
+    <color name="primary_dark">#047857</color>
+    <color name="primary_emerald">#059669</color>
+    <color name="primary_light">#10B981</color>
+    <color name="surface_mint">#ECFDF5</color>
+    <color name="text_slate">#0F172A</color>
+    <string name="app_name">SiapAjar</string>
+    <style name="Theme.SiapAjarMobile" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@color/primary_emerald</item>
+        <item name="android:navigationBarColor">@color/canvas_slate</item>
+    </style>
+</resources>
