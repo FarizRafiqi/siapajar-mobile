@@ -1,5 +1,8 @@
 package id.siapajar.app.ui.assessment
 
+import android.graphics.Bitmap
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,6 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.CloudDone
+import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,6 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -29,6 +34,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import id.siapajar.app.domain.model.InstrumentType
 import id.siapajar.app.theme.*
+import java.io.File
+import java.io.FileOutputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,7 +46,31 @@ fun QuickAssessmentScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
+    val context = LocalContext.current
     var showStudentPicker by remember { mutableStateOf(false) }
+
+    // Camera & Gallery Launchers
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { bitmap: Bitmap? ->
+        if (bitmap != null) {
+            try {
+                val file = File(context.cacheDir, "assessment_${System.currentTimeMillis()}.jpg")
+                FileOutputStream(file).use { out ->
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
+                }
+                viewModel.setPhotoPath(file.absolutePath)
+            } catch (_: Exception) {}
+        }
+    }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.setPhotoPath(uri.toString())
+        }
+    }
 
     if (showStudentPicker) {
         AlertDialog(
@@ -177,25 +208,46 @@ fun QuickAssessmentScreen(
                 .verticalScroll(scrollState)
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            // 1. Photo Hero Container
+            // 1. Photo Hero Container (Tappable to Take Photo)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(220.dp)
                     .clip(RoundedCornerShape(18.dp))
                     .background(Color(0xFFE2E8F0))
+                    .clickable { cameraLauncher.launch(null) },
+                contentAlignment = Alignment.Center
             ) {
+                val photoModel = uiState.photoPath ?: "https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=800&auto=format&fit=crop&q=80"
                 AsyncImage(
-                    model = "https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=800&auto=format&fit=crop&q=80",
+                    model = photoModel,
                     contentDescription = "Foto Asesmen",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
+
+                // Quick camera overlay badge
+                Surface(
+                    color = Color.Black.copy(alpha = 0.5f),
+                    shape = CircleShape,
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PhotoCamera,
+                        contentDescription = "Ambil Foto",
+                        tint = Color.White,
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .size(20.dp)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 2. Photo Action Buttons
+            // 2. Photo Action Buttons (Ulangi Foto / Ambil dari Galeri)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -206,7 +258,7 @@ fun QuickAssessmentScreen(
                         .height(44.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .border(1.dp, EmeraldLight.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                        .clickable { },
+                        .clickable { cameraLauncher.launch(null) },
                     color = MintSurface
                 ) {
                     Row(
@@ -215,14 +267,14 @@ fun QuickAssessmentScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Refresh,
+                            imageVector = Icons.Default.PhotoCamera,
                             contentDescription = null,
                             tint = EmeraldPrimary,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Ulangi Foto",
+                            text = "Ambil Foto",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = EmeraldPrimary
@@ -236,7 +288,7 @@ fun QuickAssessmentScreen(
                         .height(44.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .border(1.dp, EmeraldLight.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                        .clickable { },
+                        .clickable { galleryLauncher.launch("image/*") },
                     color = MintSurface
                 ) {
                     Row(
@@ -245,14 +297,14 @@ fun QuickAssessmentScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = Icons.Default.AddAPhoto,
+                            imageVector = Icons.Default.AddPhotoAlternate,
                             contentDescription = null,
                             tint = EmeraldPrimary,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Tambah Foto",
+                            text = "Dari Galeri",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = EmeraldPrimary
@@ -261,83 +313,100 @@ fun QuickAssessmentScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
-            // 3. Section: Instrumen Asesmen
+            // 3. Instrument Type Segmented Selector
             Text(
                 text = "Instrumen Asesmen",
-                fontSize = 15.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary
             )
+            Spacer(modifier = Modifier.height(8.dp))
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(InstrumentType.values()) { type ->
-                    val isSelected = type == uiState.selectedInstrument
-                    Surface(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .clickable { viewModel.setInstrument(type) }
-                            .border(
-                                width = 1.dp,
-                                color = if (isSelected) EmeraldPrimary else BorderSlate,
-                                shape = RoundedCornerShape(20.dp)
-                            ),
-                        color = if (isSelected) EmeraldPrimary else Color.White
-                    ) {
-                        Text(
-                            text = type.displayName,
-                            fontSize = 13.sp,
-                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                            color = if (isSelected) Color.White else TextPrimary,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                        )
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp)),
+                color = CanvasBackground,
+                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSlate)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    InstrumentType.values().take(3).forEach { type ->
+                        val isSelected = uiState.selectedInstrument == type
+                        Surface(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(38.dp)
+                                .clip(RoundedCornerShape(9.dp))
+                                .clickable { viewModel.setInstrument(type) },
+                            color = if (isSelected) EmeraldPrimary else Color.Transparent,
+                            shadowElevation = if (isSelected) 2.dp else 0.dp
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = type.displayName,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) Color.White else TextMuted,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
-            // 4. Section: Tandai Siswa Terkait
+            // 4. Tagged Students Section
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Tandai Siswa Terkait",
-                    fontSize = 15.sp,
+                    text = "Siswa Terkait (${uiState.selectedStudentIds.size})",
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
                 )
                 Text(
-                    text = "${uiState.selectedStudentIds.size} Dipilih",
+                    text = "Kelas TK B1",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
-                    color = EmeraldPrimary
+                    color = TextMuted
                 )
             }
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                val taggedList = uiState.availableStudents.filter { uiState.selectedStudentIds.contains(it.id) }
-                items(taggedList) { student ->
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(uiState.availableStudents) { student ->
+                    val isTagged = uiState.selectedStudentIds.contains(student.id)
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier
-                            .width(64.dp)
-                            .clickable { viewModel.toggleStudentSelection(student.id) }
+                        modifier = Modifier.clickable { viewModel.toggleStudentSelection(student.id) }
                     ) {
                         Box(contentAlignment = Alignment.BottomEnd) {
                             Box(
                                 modifier = Modifier
                                     .size(54.dp)
                                     .clip(CircleShape)
-                                    .border(2.dp, EmeraldPrimary, CircleShape)
-                                    .background(MintSurface),
+                                    .border(
+                                        width = if (isTagged) 2.5.dp else 1.dp,
+                                        color = if (isTagged) EmeraldPrimary else BorderSlate,
+                                        shape = CircleShape
+                                    ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 AsyncImage(
@@ -347,137 +416,158 @@ fun QuickAssessmentScreen(
                                     modifier = Modifier.fillMaxSize()
                                 )
                             }
-                            // Small Green Checkmark Badge
-                            Box(
-                                modifier = Modifier
-                                    .size(18.dp)
-                                    .clip(CircleShape)
-                                    .background(EmeraldPrimary)
-                                    .border(1.5.dp, Color.White, CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(12.dp)
-                                )
+
+                            if (isTagged) {
+                                Surface(
+                                    color = EmeraldPrimary,
+                                    shape = CircleShape,
+                                    modifier = Modifier
+                                        .size(18.dp)
+                                        .offset(x = 2.dp, y = 2.dp),
+                                    border = androidx.compose.foundation.BorderStroke(1.5.dp, Color.White)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.padding(2.dp)
+                                    )
+                                }
                             }
                         }
+
                         Spacer(modifier = Modifier.height(6.dp))
+
                         Text(
-                            text = student.name.split(" ").take(2).joinToString("\n"),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = TextPrimary,
-                            lineHeight = 14.sp,
-                            textAlign = TextAlign.Center
+                            text = student.name.split(" ").firstOrNull() ?: student.name,
+                            fontSize = 12.sp,
+                            fontWeight = if (isTagged) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isTagged) TextPrimary else TextMuted
                         )
                     }
                 }
 
                 item {
-                    // Add Student Button (Dashed Circle)
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier
-                            .width(64.dp)
-                            .clickable { showStudentPicker = true }
+                        modifier = Modifier.clickable { showStudentPicker = true }
                     ) {
                         Box(
                             modifier = Modifier
                                 .size(54.dp)
                                 .clip(CircleShape)
-                                .border(1.5.dp, TextMuted.copy(alpha = 0.5f), CircleShape),
+                                .border(1.5.dp, EmeraldLight.copy(alpha = 0.6f), CircleShape)
+                                .background(MintSurface),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.PersonAddAlt,
+                                imageVector = Icons.Default.Add,
                                 contentDescription = "Tambah Siswa",
-                                tint = TextMuted,
-                                modifier = Modifier.size(22.dp)
+                                tint = EmeraldPrimary,
+                                modifier = Modifier.size(24.dp)
                             )
                         }
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "Tambah\nSiswa",
-                            fontSize = 11.sp,
+                            text = "Tambah",
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Medium,
-                            color = TextMuted,
-                            lineHeight = 14.sp,
-                            textAlign = TextAlign.Center
+                            color = EmeraldPrimary
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // 5. Notes & Observations
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Catatan Pengamatan",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+                IconButton(onClick = {}) {
+                    Icon(
+                        imageVector = Icons.Outlined.Mic,
+                        contentDescription = "Voice Dictation",
+                        tint = EmeraldPrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            OutlinedTextField(
+                value = uiState.notes,
+                onValueChange = { viewModel.setNotes(it) },
+                placeholder = {
+                    Text(
+                        text = "Ceritakan proses dan respons anak saat kegiatan...\n(Contoh: Anak mampu merangkai daun mint dan mengenali aromanya secara mandiri)",
+                        fontSize = 13.sp,
+                        color = TextMuted
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(110.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = EmeraldPrimary,
+                    unfocusedBorderColor = BorderSlate,
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White
+                )
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 6. Targeted Learning Objectives (TP) Card
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = MintSurface,
+                shape = RoundedCornerShape(14.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MintContainer)
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        color = EmeraldPrimary,
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = uiState.tpCode,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "Target Capaian Hari Ini",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = EmeraldDark
+                        )
+                        Text(
+                            text = uiState.tpTitle,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = TextPrimary
                         )
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
-
-            // 5. Section: Catatan Observasi
-            Text(
-                text = "Catatan Observasi",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(140.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .border(1.dp, BorderSlate, RoundedCornerShape(14.dp)),
-                color = Color.White
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(14.dp)
-                ) {
-                    TextField(
-                        value = uiState.notes,
-                        onValueChange = { viewModel.setNotes(it) },
-                        placeholder = {
-                            Text(
-                                "Tulis catatan observasi anak di sini...",
-                                fontSize = 14.sp,
-                                color = TextMuted
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.Transparent,
-                            unfocusedContainerColor = Color.Transparent,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent
-                        )
-                    )
-
-                    // Floating Voice Dictation Mic Button in bottom right
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .align(Alignment.BottomEnd)
-                            .clip(CircleShape)
-                            .background(MintSurface)
-                            .clickable {
-                                viewModel.setNotes(uiState.notes + " Menunjukkan kemampuan motorik halus dan konsentrasi tinggi saat menyusun balok.")
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Mic,
-                            contentDescription = "Voice Dictation",
-                            tint = EmeraldPrimary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }

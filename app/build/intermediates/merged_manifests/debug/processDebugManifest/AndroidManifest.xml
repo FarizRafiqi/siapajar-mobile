@@ -15,6 +15,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -36,11 +37,13 @@
         android:roundIcon="@android:drawable/sym_def_app_icon"
         android:supportsRtl="true"
         android:testOnly="true"
-        android:theme="@style/Theme.SiapAjarMobile" >
+        android:theme="@style/Theme.SiapAjarMobile"
+        android:usesCleartextTraffic="true" >
         <activity
             android:name="id.siapajar.app.MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.SiapAjarMobile" >
+            android:theme="@style/Theme.SiapAjarMobile"
+            android:windowSoftInputMode="adjustResize" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

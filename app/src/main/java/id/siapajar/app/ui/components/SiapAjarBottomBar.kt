@@ -3,9 +3,10 @@ package id.siapajar.app.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Assignment
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material3.*
@@ -14,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -31,18 +33,18 @@ fun SiapAjarBottomBar(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(68.dp)
-            .shadow(elevation = 12.dp),
+            .height(72.dp)
+            .shadow(elevation = 16.dp),
         color = Color.White
     ) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
+                .padding(horizontal = 24.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 1. Beranda Tab
+            // 1. Beranda Tab (Left)
             BottomNavItem(
                 label = "Beranda",
                 icon = Icons.Outlined.Home,
@@ -50,15 +52,30 @@ fun SiapAjarBottomBar(
                 onClick = onNavigateHome
             )
 
-            // 2. Asesmen Tab
-            BottomNavItem(
-                label = "Asesmen",
-                icon = Icons.Outlined.Assignment,
-                isActive = currentRoute == "quick_assessment",
-                onClick = onNavigateAssessment
-            )
+            // 2. Center Prominent Camera FAB (Catat Asesmen Cepat)
+            Box(
+                modifier = Modifier
+                    .offset(y = (-6).dp)
+                    .size(54.dp)
+                    .shadow(elevation = 8.dp, shape = CircleShape)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(EmeraldLight, EmeraldPrimary, EmeraldDark)
+                        )
+                    )
+                    .clickable { onNavigateAssessment() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PhotoCamera,
+                    contentDescription = "Catat Asesmen Foto",
+                    tint = Color.White,
+                    modifier = Modifier.size(26.dp)
+                )
+            }
 
-            // 3. Siswa Tab
+            // 3. Siswa Tab (Right)
             BottomNavItem(
                 label = "Siswa",
                 icon = Icons.Outlined.Group,
@@ -77,21 +94,20 @@ private fun BottomNavItem(
     onClick: () -> Unit
 ) {
     if (isActive) {
-        // Active Pill Style (as shown in Stitch Screenshot 2: Filled Emerald rounded container)
         Box(
             modifier = Modifier
-                .height(42.dp)
-                .clip(RoundedCornerShape(22.dp))
-                .background(EmeraldPrimary)
+                .height(40.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(MintSurface)
                 .clickable { onClick() }
-                .padding(horizontal = 18.dp),
+                .padding(horizontal = 16.dp),
             contentAlignment = Alignment.Center
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = icon,
                     contentDescription = label,
-                    tint = Color.White,
+                    tint = EmeraldPrimary,
                     modifier = Modifier.size(20.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
@@ -99,12 +115,11 @@ private fun BottomNavItem(
                     text = label,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = EmeraldPrimary
                 )
             }
         }
     } else {
-        // Inactive Icon + Text Stack
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
