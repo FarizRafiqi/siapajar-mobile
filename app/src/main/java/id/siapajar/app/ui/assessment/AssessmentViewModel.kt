@@ -40,27 +40,18 @@ class AssessmentViewModel(application: Application) : AndroidViewModel(applicati
 
     private fun loadStudents() {
         viewModelScope.launch {
-            // First fetch from API or Room
+            // Fetch from API and sync to Room
             studentRepo.fetchStudentsFromApi("1")
             studentRepo.getStudentsByClass("1").collect { list ->
-                if (list.isNotEmpty()) {
-                    _uiState.value = _uiState.value.copy(
-                        availableStudents = list,
-                        selectedStudentIds = if (_uiState.value.selectedStudentIds.isEmpty()) setOf(list.first().id) else _uiState.value.selectedStudentIds
-                    )
-                } else {
-                    // Default fallback students
-                    val mockList = listOf(
-                        Student("1", "Kenzo Alvaro", "10234", null, "1", "TK B1"),
-                        Student("2", "Aisyah Putri", "10235", null, "1", "TK B1"),
-                        Student("3", "Fathan Rasyid", "10236", null, "1", "TK B1"),
-                        Student("4", "Naura Hasna", "10237", null, "1", "TK B1")
-                    )
-                    _uiState.value = _uiState.value.copy(
-                        availableStudents = mockList,
-                        selectedStudentIds = setOf("1", "2")
-                    )
-                }
+                _uiState.value = _uiState.value.copy(
+                    availableStudents = list,
+                    selectedStudentIds = if (list.isNotEmpty()) {
+                        val validSelections = _uiState.value.selectedStudentIds.filter { id -> list.any { it.id == id } }.toSet()
+                        if (validSelections.isEmpty()) setOf(list.first().id) else validSelections
+                    } else {
+                        emptySet()
+                    }
+                )
             }
         }
     }

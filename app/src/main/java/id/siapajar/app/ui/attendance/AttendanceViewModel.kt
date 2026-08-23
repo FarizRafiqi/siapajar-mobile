@@ -43,22 +43,11 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
         viewModelScope.launch {
             studentRepo.fetchStudentsFromApi("1")
             studentRepo.getStudentsByClass("1").collect { list ->
-                if (list.isNotEmpty()) {
-                    _uiState.value = _uiState.value.copy(
-                        students = list.map {
-                            StudentAttendanceState(it.id, it.name, it.nis, AttendanceStatus.HADIR)
-                        }
-                    )
-                } else {
-                    val defaultList = listOf(
-                        StudentAttendanceState("1", "Ahmad Rayhan", "202601", AttendanceStatus.HADIR),
-                        StudentAttendanceState("2", "Aisyah Putri", "202602", AttendanceStatus.HADIR),
-                        StudentAttendanceState("3", "Kenzo Alvaro", "202603", AttendanceStatus.HADIR),
-                        StudentAttendanceState("4", "Bilqis Humaira", "202604", AttendanceStatus.IZIN),
-                        StudentAttendanceState("5", "Fathir Rahman", "202605", AttendanceStatus.SAKIT)
-                    )
-                    _uiState.value = _uiState.value.copy(students = defaultList)
-                }
+                _uiState.value = _uiState.value.copy(
+                    students = list.map {
+                        StudentAttendanceState(it.id, it.name, it.nis, AttendanceStatus.HADIR)
+                    }
+                )
             }
         }
     }

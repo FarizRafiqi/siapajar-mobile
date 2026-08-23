@@ -1,8 +1,15 @@
 package id.siapajar.app.ui.assessment
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -51,26 +58,76 @@ fun QuickAssessmentScreen(
     val context = LocalContext.current
     var showStudentPicker by remember { mutableStateOf(false) }
 
-    // Camera & Gallery Launchers
-    val cameraLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicturePreview()
-    ) { bitmap: Bitmap? ->
-        if (bitmap != null) {
-            try {
-                val file = File(context.cacheDir, "assessment_${System.currentTimeMillis()}.jpg")
-                FileOutputStream(file).use { out ->
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
-                }
-                viewModel.setPhotoPath(file.absolutePath)
-            } catch (_: Exception) {}
+    // State for Camera Capture File & Uri
+    var currentPhotoFile by remember { mutableStateOf<File?>(null) }
+
+    val takePictureLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { isSuccess ->
+        if (isSuccess && currentPhotoFile != null && currentPhotoFile!!.exists() && currentPhotoFile!!.length() > 0) {
+            viewModel.setPhotoPath(currentPhotoFile!!.absolutePath)
+        }
+    }
+
+    val requestPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            tryLaunchCamera(context, { currentPhotoFile = it }, { takePictureLauncher.launch(it) })
+        } else {
+            Toast.makeText(context, "Izin kamera diperlukan untuk mengambil foto asesmen", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun openCamera() {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+            tryLaunchCamera(context, { currentPhotoFile = it }, { takePictureLauncher.launch(it) })
+        } else {
+            requestPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
-    ) { uri ->
+    ) { uri: Uri? ->
         if (uri != null) {
-            viewModel.setPhotoPath(uri.toString())
+            try {
+                val photosDir = File(context.cacheDir, "photos").apply { mkdirs() }
+                val targetFile = File(photosDir, "gallery_${System.currentTimeMillis()}.jpg")
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    FileOutputStream(targetFile).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                viewModel.setPhotoPath(targetFile.absolutePath)
+            } catch (_: Exception) {
+                viewModel.setPhotoPath(uri.toString())
+            }
+        }
+    }
+
+    val storagePermission = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.READ_MEDIA_IMAGES
+    } else {
+        Manifest.permission.READ_EXTERNAL_STORAGE
+    }
+
+    val requestStoragePermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            galleryLauncher.launch("image/*")
+        } else {
+            Toast.makeText(context, "Izin akses foto diperlukan untuk memilih gambar", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun openGallery() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(context, storagePermission) == PackageManager.PERMISSION_GRANTED) {
+            galleryLauncher.launch("image/*")
+        } else {
+            requestStoragePermissionLauncher.launch(storagePermission)
         }
     }
 
@@ -79,34 +136,63 @@ fun QuickAssessmentScreen(
             onDismissRequest = { showStudentPicker = false },
             title = { Text("Pilih Siswa Terkait", fontWeight = FontWeight.Bold, color = TextPrimary) },
             text = {
-                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    uiState.availableStudents.forEach { student ->
-                        val isSelected = uiState.selectedStudentIds.contains(student.id)
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { viewModel.toggleStudentSelection(student.id) }
-                                .padding(vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Checkbox(
-                                checked = isSelected,
-                                onCheckedChange = { viewModel.toggleStudentSelection(student.id) },
-                                colors = CheckboxDefaults.colors(checkedColor = EmeraldPrimary)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            StudentAvatar(
-                                name = student.name,
-                                photoUrl = student.photoUrl,
-                                size = 36.dp
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(
-                                text = student.name,
-                                fontSize = 14.sp,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                color = TextPrimary
-                            )
+                if (uiState.availableStudents.isEmpty()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PeopleOutline,
+                            contentDescription = null,
+                            tint = TextMuted,
+                            modifier = Modifier.size(36.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Belum Ada Siswa Terdaftar",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextPrimary
+                        )
+                        Text(
+                            text = "Data siswa belum tersedia atau belum disinkronkan.",
+                            fontSize = 12.sp,
+                            color = TextMuted,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                } else {
+                    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                        uiState.availableStudents.forEach { student ->
+                            val isSelected = uiState.selectedStudentIds.contains(student.id)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { viewModel.toggleStudentSelection(student.id) }
+                                    .padding(vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Checkbox(
+                                    checked = isSelected,
+                                    onCheckedChange = { viewModel.toggleStudentSelection(student.id) },
+                                    colors = CheckboxDefaults.colors(checkedColor = EmeraldPrimary)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                StudentAvatar(
+                                    name = student.name,
+                                    photoUrl = student.photoUrl,
+                                    size = 36.dp
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = student.name,
+                                    fontSize = 14.sp,
+                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                    color = TextPrimary
+                                )
+                            }
                         }
                     }
                 }
@@ -223,7 +309,7 @@ fun QuickAssessmentScreen(
                     .height(220.dp)
                     .clip(RoundedCornerShape(18.dp))
                     .background(Color(0xFFE2E8F0))
-                    .clickable { cameraLauncher.launch(null) },
+                    .clickable { openCamera() },
                 contentAlignment = Alignment.Center
             ) {
                 val photoModel = uiState.photoPath ?: "https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=800&auto=format&fit=crop&q=80"
@@ -266,7 +352,7 @@ fun QuickAssessmentScreen(
                         .height(44.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .border(1.dp, EmeraldLight.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                        .clickable { cameraLauncher.launch(null) },
+                        .clickable { openCamera() },
                     color = MintSurface
                 ) {
                     Row(
@@ -296,7 +382,7 @@ fun QuickAssessmentScreen(
                         .height(44.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .border(1.dp, EmeraldLight.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                        .clickable { galleryLauncher.launch("image/*") },
+                        .clickable { openGallery() },
                     color = MintSurface
                 ) {
                     Row(
@@ -394,83 +480,128 @@ fun QuickAssessmentScreen(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                items(uiState.availableStudents) { student ->
-                    val isTagged = uiState.selectedStudentIds.contains(student.id)
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.clickable { viewModel.toggleStudentSelection(student.id) }
-                    ) {
-                        Box(contentAlignment = Alignment.BottomEnd) {
-                            StudentAvatar(
-                                name = student.name,
-                                photoUrl = student.photoUrl,
-                                size = 54.dp,
-                                borderWidth = if (isTagged) 2.5.dp else 1.dp,
-                                borderColor = if (isTagged) EmeraldPrimary else BorderSlate
-                            )
-
-                            if (isTagged) {
-                                Surface(
-                                    color = EmeraldPrimary,
-                                    shape = CircleShape,
-                                    modifier = Modifier
-                                        .size(18.dp)
-                                        .offset(x = 2.dp, y = 2.dp),
-                                    border = androidx.compose.foundation.BorderStroke(1.5.dp, Color.White)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Check,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.padding(2.dp)
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        Text(
-                            text = student.name.split(" ").firstOrNull() ?: student.name,
-                            fontSize = 12.sp,
-                            fontWeight = if (isTagged) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isTagged) TextPrimary else TextMuted
-                        )
-                    }
-                }
-
-                item {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.clickable { showStudentPicker = true }
+            if (uiState.availableStudents.isEmpty()) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp)),
+                    color = CanvasBackground,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderSlate)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(54.dp)
-                                .clip(CircleShape)
-                                .border(1.5.dp, EmeraldLight.copy(alpha = 0.6f), CircleShape)
-                                .background(MintSurface),
+                                .size(40.dp)
+                                .background(MintSurface, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "Tambah Siswa",
+                                imageVector = Icons.Default.PeopleOutline,
+                                contentDescription = null,
                                 tint = EmeraldPrimary,
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier.size(22.dp)
                             )
                         }
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "Tambah",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = EmeraldPrimary
-                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Belum Ada Data Siswa",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = "Data siswa di kelas ini belum tersedia atau belum ditambahkan.",
+                                fontSize = 12.sp,
+                                color = TextMuted
+                            )
+                        }
+                    }
+                }
+            } else {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(uiState.availableStudents) { student ->
+                        val isTagged = uiState.selectedStudentIds.contains(student.id)
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.clickable { viewModel.toggleStudentSelection(student.id) }
+                        ) {
+                            Box(contentAlignment = Alignment.BottomEnd) {
+                                StudentAvatar(
+                                    name = student.name,
+                                    photoUrl = student.photoUrl,
+                                    size = 54.dp,
+                                    borderWidth = if (isTagged) 2.5.dp else 1.dp,
+                                    borderColor = if (isTagged) EmeraldPrimary else BorderSlate
+                                )
+
+                                if (isTagged) {
+                                    Surface(
+                                        color = EmeraldPrimary,
+                                        shape = CircleShape,
+                                        modifier = Modifier
+                                            .size(18.dp)
+                                            .offset(x = 2.dp, y = 2.dp),
+                                        border = androidx.compose.foundation.BorderStroke(1.5.dp, Color.White)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Check,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.padding(2.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Text(
+                                text = student.name.split(" ").firstOrNull() ?: student.name,
+                                fontSize = 12.sp,
+                                fontWeight = if (isTagged) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isTagged) TextPrimary else TextMuted
+                            )
+                        }
+                    }
+
+                    item {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.clickable { showStudentPicker = true }
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(54.dp)
+                                    .clip(CircleShape)
+                                    .border(1.5.dp, EmeraldLight.copy(alpha = 0.6f), CircleShape)
+                                    .background(MintSurface),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Tambah Siswa",
+                                    tint = EmeraldPrimary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "Tambah",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = EmeraldPrimary
+                            )
+                        }
                     }
                 }
             }
@@ -568,3 +699,28 @@ fun QuickAssessmentScreen(
         }
     }
 }
+
+private fun tryLaunchCamera(
+    context: Context,
+    onFileCreated: (File) -> Unit,
+    onLaunch: (Uri) -> Unit
+) {
+    try {
+        val photosDir = File(context.cacheDir, "photos").apply { mkdirs() }
+        val file = File(photosDir, "assessment_${System.currentTimeMillis()}.jpg")
+        onFileCreated(file)
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            file
+        )
+        onLaunch(uri)
+    } catch (e: Exception) {
+        Toast.makeText(
+            context,
+            "Gagal menyiapkan kamera: ${e.localizedMessage ?: "Terjadi kesalahan"}",
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+}
+

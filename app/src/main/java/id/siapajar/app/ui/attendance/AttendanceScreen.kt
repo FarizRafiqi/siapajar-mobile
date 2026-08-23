@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.PeopleOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -31,6 +33,39 @@ data class StudentAttendanceState(
     val nis: String,
     val status: AttendanceStatus
 )
+
+@Composable
+fun StatBadge(label: String, value: String, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(text = value, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = color)
+        Text(text = label, fontSize = 11.sp, color = TextSecondary)
+    }
+}
+
+@Composable
+fun AttendanceChip(
+    code: String,
+    isSelected: Boolean,
+    activeColor: Color,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(34.dp)
+            .clip(CircleShape)
+            .background(if (isSelected) activeColor else CanvasBackground)
+            .border(1.dp, if (isSelected) activeColor else BorderSlate, CircleShape)
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = code,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = if (isSelected) Color.White else TextSecondary
+        )
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,33 +91,37 @@ fun AttendanceScreen(
                     }
                 },
                 actions = {
-                    TextButton(onClick = { viewModel.markAllPresent() }) {
-                        Text("Semua Hadir", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = EmeraldPrimary)
+                    if (uiState.students.isNotEmpty()) {
+                        TextButton(onClick = { viewModel.markAllPresent() }) {
+                            Text("Semua Hadir", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = EmeraldPrimary)
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = CanvasBackground)
             )
         },
         bottomBar = {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                color = Color.Transparent
-            ) {
-                Button(
-                    onClick = { viewModel.submitAttendance(onSaveSuccess) },
-                    enabled = !uiState.isLoading,
+            if (uiState.students.isNotEmpty()) {
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(54.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
-                    shape = RoundedCornerShape(14.dp)
+                        .padding(16.dp),
+                    color = Color.Transparent
                 ) {
-                    if (uiState.isLoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
-                    } else {
-                        Text("Simpan Presensi", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Button(
+                        onClick = { viewModel.submitAttendance(onSaveSuccess) },
+                        enabled = !uiState.isLoading,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(54.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        if (uiState.isLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp), color = Color.White)
+                        } else {
+                            Text("Simpan Presensi", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
                     }
                 }
             }
@@ -122,63 +161,109 @@ fun AttendanceScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Student Attendance List
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                contentPadding = PaddingValues(bottom = 80.dp)
-            ) {
-                items(uiState.students) { student ->
-                    Surface(
+            // Student Attendance List / Empty State
+            if (uiState.students.isEmpty()) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    color = CardSurface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, BorderSlate)
+                ) {
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
-                            .border(1.dp, BorderSlate, RoundedCornerShape(14.dp)),
-                        color = CardSurface
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Row(
+                        Box(
                             modifier = Modifier
-                                .padding(12.dp)
-                                .fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                                .size(50.dp)
+                                .background(MintSurface, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PeopleOutline,
+                                contentDescription = null,
+                                tint = EmeraldPrimary,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Belum Ada Data Siswa",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Data siswa untuk presensi kelas ini belum tersedia atau belum ditambahkan.",
+                            fontSize = 13.sp,
+                            color = TextMuted,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(bottom = 80.dp)
+                ) {
+                    items(uiState.students) { student ->
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .border(1.dp, BorderSlate, RoundedCornerShape(14.dp)),
+                            color = CardSurface
                         ) {
                             Row(
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier
+                                    .padding(12.dp)
+                                    .fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                StudentAvatar(
-                                    name = student.name,
-                                    size = 38.dp
-                                )
-                                Spacer(modifier = Modifier.width(10.dp))
-                                Column {
-                                    Text(
-                                        text = student.name,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = TextPrimary
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    StudentAvatar(
+                                        name = student.name,
+                                        size = 38.dp
                                     )
-                                    Text(
-                                        text = "NIS: ${student.nis}",
-                                        fontSize = 11.sp,
-                                        color = TextSecondary
-                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Text(
+                                            text = student.name,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextPrimary
+                                        )
+                                        Text(
+                                            text = "NIS: ${student.nis}",
+                                            fontSize = 11.sp,
+                                            color = TextSecondary
+                                        )
+                                    }
                                 }
-                            }
 
-                            // Status Options: H, S, I, A
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                AttendanceChip("H", student.status == AttendanceStatus.HADIR, EmeraldPrimary) {
-                                    viewModel.updateStatus(student.id, AttendanceStatus.HADIR)
-                                }
-                                AttendanceChip("S", student.status == AttendanceStatus.SAKIT, Color(0xFF2563EB)) {
-                                    viewModel.updateStatus(student.id, AttendanceStatus.SAKIT)
-                                }
-                                AttendanceChip("I", student.status == AttendanceStatus.IZIN, AmberAccent) {
-                                    viewModel.updateStatus(student.id, AttendanceStatus.IZIN)
-                                }
-                                AttendanceChip("A", student.status == AttendanceStatus.ALPA, Color(0xFFDC2626)) {
-                                    viewModel.updateStatus(student.id, AttendanceStatus.ALPA)
+                                // Status Options: H, S, I, A
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    AttendanceChip("H", student.status == AttendanceStatus.HADIR, EmeraldPrimary) {
+                                        viewModel.updateStatus(student.id, AttendanceStatus.HADIR)
+                                    }
+                                    AttendanceChip("S", student.status == AttendanceStatus.SAKIT, Color(0xFF2563EB)) {
+                                        viewModel.updateStatus(student.id, AttendanceStatus.SAKIT)
+                                    }
+                                    AttendanceChip("I", student.status == AttendanceStatus.IZIN, AmberAccent) {
+                                        viewModel.updateStatus(student.id, AttendanceStatus.IZIN)
+                                    }
+                                    AttendanceChip("A", student.status == AttendanceStatus.ALPA, Color(0xFFDC2626)) {
+                                        viewModel.updateStatus(student.id, AttendanceStatus.ALPA)
+                                    }
                                 }
                             }
                         }
@@ -186,38 +271,5 @@ fun AttendanceScreen(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun StatBadge(label: String, value: String, color: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = value, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = color)
-        Text(text = label, fontSize = 11.sp, color = TextSecondary)
-    }
-}
-
-@Composable
-private fun AttendanceChip(
-    code: String,
-    isSelected: Boolean,
-    activeColor: Color,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .size(34.dp)
-            .clip(CircleShape)
-            .background(if (isSelected) activeColor else CanvasBackground)
-            .border(1.dp, if (isSelected) activeColor else BorderSlate, CircleShape)
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = code,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            color = if (isSelected) Color.White else TextSecondary
-        )
     }
 }
