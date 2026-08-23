@@ -1,8 +1,10 @@
 package id.siapajar.app.data.remote
 
 import android.content.Context
+import id.siapajar.app.BuildConfig
 import id.siapajar.app.data.local.TokenManager
 import kotlinx.serialization.json.Json
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -43,12 +45,47 @@ object ApiClient {
             chain.proceed(requestBuilder.build())
         }
 
+        val fallbackInterceptor = Interceptor { chain ->
+            val request = chain.request()
+            try {
+                val response = chain.proceed(request)
+                // If primary host returns 5xx server error, try fallback domain if available
+                if (!response.isSuccessful && response.code >= 500 && BuildConfig.FALLBACK_BASE_URL.isNotBlank()) {
+                    val fallbackHttpUrl = BuildConfig.FALLBACK_BASE_URL.toHttpUrlOrNull()
+                    if (fallbackHttpUrl != null && request.url.host != fallbackHttpUrl.host) {
+                        response.close()
+                        val newUrl = request.url.newBuilder()
+                            .scheme(fallbackHttpUrl.scheme)
+                            .host(fallbackHttpUrl.host)
+                            .port(fallbackHttpUrl.port)
+                            .build()
+                        return@Interceptor chain.proceed(request.newBuilder().url(newUrl).build())
+                    }
+                }
+                response
+            } catch (e: Exception) {
+                // If connection or DNS fails on primary host, seamlessly retry on fallback host
+                val fallbackHttpUrl = BuildConfig.FALLBACK_BASE_URL.toHttpUrlOrNull()
+                if (fallbackHttpUrl != null && request.url.host != fallbackHttpUrl.host) {
+                    val newUrl = request.url.newBuilder()
+                        .scheme(fallbackHttpUrl.scheme)
+                        .host(fallbackHttpUrl.host)
+                        .port(fallbackHttpUrl.port)
+                        .build()
+                    chain.proceed(request.newBuilder().url(newUrl).build())
+                } else {
+                    throw e
+                }
+            }
+        }
+
         val loggingInterceptor = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
 
         val okHttpClient = OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
+            .addInterceptor(fallbackInterceptor)
             .addInterceptor(loggingInterceptor)
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)

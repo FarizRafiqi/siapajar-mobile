@@ -2,6 +2,7 @@ package id.siapajar.app.data.local
 
 import android.content.Context
 import android.content.SharedPreferences
+import id.siapajar.app.BuildConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -89,8 +90,8 @@ class TokenManager(context: Context) {
         private const val KEY_ROLE = "user_role"
         private const val KEY_BASE_URL = "server_base_url"
 
-        // Default to Android Emulator loopback mapping (10.0.2.2 points to host machine port 3333)
-        const val DEFAULT_BASE_URL = "http://10.0.2.2:3333/"
+        // Default URL dynamically loaded from BuildConfig (Debug: localhost/10.0.2.2, Release: Production URL)
+        val DEFAULT_BASE_URL: String = BuildConfig.BASE_URL
 
         @Volatile
         private var INSTANCE: TokenManager? = null

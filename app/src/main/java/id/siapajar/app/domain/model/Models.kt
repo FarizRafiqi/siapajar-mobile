@@ -53,11 +53,27 @@ data class Attendance(
     val syncStatus: SyncStatus = SyncStatus.PENDING
 )
 
+data class CoreActivity(
+    val id: Int = 1,
+    val name: String = "",
+    val focus: String = "Kreativitas & Kemandirian",
+    val materials: String = "",
+    val instructions: String = "",
+    val benefits: String = "",
+    val isPrimary: Boolean = false
+)
+
 data class TodayAgenda(
-    val weekNumber: Int = 3,
+    val weekNumber: Int = 2,
     val semesterNumber: Int = 1,
-    val topicTitle: String = "Mengenal Tanaman Obat & Apotek Hidup",
-    val todayActivity: String = "Eksplorasi Daun Mint & Menggambar Bentuk Daun",
+    val topicTitle: String = "Aku Cinta Indonesia: Negeri Seribu Pulau",
+    val subTopic: String = "Tanah Air / Indonesia (Fase Fondasi - TK B 5-6 Tahun)",
+    val todayActivity: String = "Membuat Lukisan Burung Garuda dengan Teknik Percikan",
     val targetedTpCode: String = "TP 1.3",
-    val targetedTpTitle: String = "Menjaga Kebersihan & Rasa Ingin Tahu"
+    val targetedTpTitle: String = "Menjaga Kebersihan & Mengenal Simbol Negara",
+    val stage: String = "MEMAHAMI (BERKESADARAN, BERMAKNA)",
+    val openingActivities: List<String> = emptyList(),
+    val openingQuestions: List<String> = emptyList(),
+    val coreActivities: List<CoreActivity> = emptyList(),
+    val closingActivities: List<String> = emptyList()
 )

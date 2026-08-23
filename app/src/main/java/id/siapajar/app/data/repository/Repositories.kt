@@ -39,11 +39,26 @@ class AuthRepository(
                 )
                 Result.success(loginData.user)
             } else {
-                val errorMsg = response.body()?.message ?: "Email atau kata sandi tidak valid (${response.code()})"
+                val errorBodyStr = response.errorBody()?.string()
+                val parsedErrorMsg = try {
+                    if (!errorBodyStr.isNullOrBlank()) {
+                        val regex = """"message"\s*:\s*"([^"]+)"""".toRegex()
+                        regex.find(errorBodyStr)?.groupValues?.get(1)
+                    } else null
+                } catch (_: Exception) { null }
+
+                val errorMsg = parsedErrorMsg
+                    ?: response.body()?.message
+                    ?: if (response.code() == 401) "Email atau kata sandi salah" else "Gagal masuk (${response.code()})"
                 Result.failure(Exception(errorMsg))
             }
         } catch (e: Exception) {
-            Result.failure(Exception(e.localizedMessage ?: "Gagal terhubung ke server backend"))
+            val friendlyMsg = when {
+                e.message?.contains("Failed to connect") == true || e.message?.contains("ECONNREFUSED") == true ->
+                    "Tidak dapat terhubung ke server SiapAjar. Pastikan backend aktif."
+                else -> e.localizedMessage ?: "Gagal terhubung ke server backend"
+            }
+            Result.failure(Exception(friendlyMsg))
         }
     }
 

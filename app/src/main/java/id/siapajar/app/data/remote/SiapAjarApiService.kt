@@ -53,13 +53,30 @@ data class StudentDto(
 )
 
 @Serializable
+data class CoreActivityDto(
+    val id: Int = 1,
+    val name: String = "",
+    val focus: String = "Kreativitas & Kemandirian",
+    val materials: String = "",
+    val instructions: String = "",
+    val benefits: String = "",
+    val isPrimary: Boolean = false
+)
+
+@Serializable
 data class TodayAgendaDto(
-    val weekNumber: Int,
-    val semesterNumber: Int,
-    val topicTitle: String,
-    val todayActivity: String,
-    val targetedTpCode: String,
-    val targetedTpTitle: String
+    val weekNumber: Int = 2,
+    val semesterNumber: Int = 1,
+    val topicTitle: String = "",
+    val subTopic: String = "",
+    val todayActivity: String = "",
+    val targetedTpCode: String = "",
+    val targetedTpTitle: String = "",
+    val stage: String = "MEMAHAMI (BERKESADARAN, BERMAKNA)",
+    val openingActivities: List<String> = emptyList(),
+    val openingQuestions: List<String> = emptyList(),
+    val coreActivities: List<CoreActivityDto> = emptyList(),
+    val closingActivities: List<String> = emptyList()
 )
 
 @Serializable
