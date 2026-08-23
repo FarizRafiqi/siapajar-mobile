@@ -1,23 +1,58 @@
 package id.siapajar.app.theme
 
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
 
+// Brand Primary Colors (Consistent Emerald Theme)
 val EmeraldPrimary = Color(0xFF059669)
 val EmeraldDark = Color(0xFF047857)
 val EmeraldLight = Color(0xFF10B981)
-val MintSurface = Color(0xFFECFDF5)
-val MintContainer = Color(0xFFD1FAE5)
 
 val AmberAccent = Color(0xFFF59E0B)
 val AmberLight = Color(0xFFFEF3C7)
 
-val CanvasBackground = Color(0xFFF8FAFC)
-val CardSurface = Color(0xFFFFFFFF)
-val BorderSlate = Color(0xFFE2E8F0)
+// Dynamic Theme Tokens (Automatically React to System Light & Dark Mode)
+val CanvasBackground: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = if (isSystemInDarkTheme()) Color(0xFF0B1120) else Color(0xFFF8FAFC)
 
-val TextPrimary = Color(0xFF0F172A)
-val TextSecondary = Color(0xFF334155)
-val TextMuted = Color(0xFF64748B)
+val CardSurface: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = if (isSystemInDarkTheme()) Color(0xFF131D31) else Color(0xFFFFFFFF)
+
+val BorderSlate: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = if (isSystemInDarkTheme()) Color(0xFF1E293B) else Color(0xFFE2E8F0)
+
+val TextPrimary: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = if (isSystemInDarkTheme()) Color(0xFFF8FAFC) else Color(0xFF0F172A)
+
+val TextSecondary: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = if (isSystemInDarkTheme()) Color(0xFFCBD5E1) else Color(0xFF334155)
+
+val TextMuted: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = if (isSystemInDarkTheme()) Color(0xFF94A3B8) else Color(0xFF64748B)
+
+val MintSurface: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = if (isSystemInDarkTheme()) Color(0xFF064E3B).copy(alpha = 0.45f) else Color(0xFFECFDF5)
+
+val MintContainer: Color
+    @Composable
+    @ReadOnlyComposable
+    get() = if (isSystemInDarkTheme()) Color(0xFF064E3B) else Color(0xFFD1FAE5)
 
 // Slate Color Palette
 val Slate900 = Color(0xFF0F172A)

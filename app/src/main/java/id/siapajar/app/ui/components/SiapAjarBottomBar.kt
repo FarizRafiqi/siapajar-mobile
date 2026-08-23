@@ -236,8 +236,8 @@ private fun QuickActionItem(
             .clip(RoundedCornerShape(16.dp))
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
-        color = Color(0xFFF8FAFC),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0))
+        color = CanvasBackground,
+        border = androidx.compose.foundation.BorderStroke(1.dp, BorderSlate)
     ) {
         Row(
             modifier = Modifier.padding(14.dp),
@@ -278,7 +278,7 @@ private fun QuickActionItem(
             Icon(
                 imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
-                tint = Slate400,
+                tint = TextMuted,
                 modifier = Modifier.size(20.dp)
             )
         }
