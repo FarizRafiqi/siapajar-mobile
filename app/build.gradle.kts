@@ -18,15 +18,23 @@ android {
         versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:3333/\"")
+        buildConfigField("String", "FALLBACK_BASE_URL", "\"https://siapajar.farizrafiqi.dev/\"")
     }
 
     buildTypes {
+        debug {
+            buildConfigField("String", "BASE_URL", "\"http://10.0.2.2:3333/\"")
+            buildConfigField("String", "FALLBACK_BASE_URL", "\"https://siapajar.farizrafiqi.dev/\"")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            buildConfigField("String", "BASE_URL", "\"https://siapajar.farizrafiqi.dev/\"")
+            buildConfigField("String", "FALLBACK_BASE_URL", "\"https://siapajar.id/\"")
         }
     }
     compileOptions {
@@ -38,6 +46,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

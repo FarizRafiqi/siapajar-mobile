@@ -31,7 +31,7 @@ interface AssessmentDao {
     suspend fun insertAssessment(assessment: AssessmentEntity)
 
     @Query("UPDATE assessments SET syncStatus = :status WHERE id = :id")
-    suspend fun updateSyncStatus(id: String, status: String)
+    suspend fun updateSyncStatus(id: String, status: String): Int
 }
 
 @Dao
@@ -46,7 +46,7 @@ interface AttendanceDao {
     suspend fun insertAttendances(attendances: List<AttendanceEntity>)
 
     @Query("UPDATE attendances SET syncStatus = :status WHERE id = :id")
-    suspend fun updateSyncStatus(id: String, status: String)
+    suspend fun updateSyncStatus(id: String, status: String): Int
 }
 
 @Dao
@@ -58,5 +58,5 @@ interface SyncQueueDao {
     suspend fun enqueue(item: SyncQueueEntity)
 
     @Delete
-    suspend fun dequeue(item: SyncQueueEntity)
+    suspend fun dequeue(item: SyncQueueEntity): Int
 }
