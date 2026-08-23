@@ -9,6 +9,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
+import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -28,6 +30,7 @@ import id.siapajar.app.theme.*
 fun HomeScreen(
     onNavigateAttendance: () -> Unit,
     onNavigateAssessment: () -> Unit,
+    onNavigateRppmDetail: () -> Unit = {},
     onGenerateAiSummary: () -> Unit,
     onLogout: () -> Unit = {},
     viewModel: HomeViewModel = viewModel()
@@ -147,7 +150,7 @@ fun HomeScreen(
                 colors = IconButtonDefaults.iconButtonColors(contentColor = TextSecondary)
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.Logout,
+                    imageVector = Icons.AutoMirrored.Outlined.Logout,
                     contentDescription = "Keluar Akun",
                     tint = Color(0xFFEF4444)
                 )
@@ -156,71 +159,145 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // 2. Hero Card: Agenda Hari Ini
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(EmeraldPrimary, EmeraldDark)
+        // 2. Hero Card: Agenda Hari Ini (Clickable to RppmDetail or Empty State)
+        val agenda = uiState.todayAgenda
+        if (agenda != null && agenda.topicTitle.isNotBlank()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(EmeraldPrimary, EmeraldDark)
+                        )
                     )
-                )
-                .padding(18.dp)
-        ) {
-            Column {
-                Surface(
-                    color = Color.White.copy(alpha = 0.2f),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(
-                        text = "Agenda & RPPM Aktif",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Text(
-                    text = "Topik: ${uiState.todayAgenda.topicTitle}",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = "Kegiatan: ${uiState.todayAgenda.todayActivity}",
-                    fontSize = 13.sp,
-                    color = Color.White.copy(alpha = 0.9f)
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Surface(
-                    color = Color.White.copy(alpha = 0.15f),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
+                    .clickable { onNavigateRppmDetail() }
+                    .padding(18.dp)
+            ) {
+                Column {
                     Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.TrackChanges,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
+                        Surface(
+                            color = Color.White.copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                text = "Agenda & RPPM Aktif",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "Lihat Detail",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White
+                            )
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Text(
+                        text = "Topik: ${agenda.topicTitle}",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+
+                    if (agenda.todayActivity.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "${uiState.todayAgenda.targetedTpCode} - ${uiState.todayAgenda.targetedTpTitle}",
+                            text = "Kegiatan: ${agenda.todayActivity}",
+                            fontSize = 13.sp,
+                            color = Color.White.copy(alpha = 0.9f)
+                        )
+                    }
+
+                    if (agenda.targetedTpCode.isNotBlank() || agenda.targetedTpTitle.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Surface(
+                            color = Color.White.copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.TrackChanges,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "${agenda.targetedTpCode} - ${agenda.targetedTpTitle}".trim(' ', '-'),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            // Empty State Card untuk Modul Ajar / RPPM
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = CardSurface),
+                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSlate)
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(MintSurface),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MenuBook,
+                            contentDescription = null,
+                            tint = EmeraldDark,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Belum Ada RPPM / Modul Ajar Aktif",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Susun atau generate Modul Ajar (RPM) di web SiapAjar untuk kelas ini.",
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color.White
+                            color = TextMuted,
+                            lineHeight = 16.sp
                         )
                     }
                 }

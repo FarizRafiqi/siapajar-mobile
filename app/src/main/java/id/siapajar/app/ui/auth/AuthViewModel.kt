@@ -13,7 +13,7 @@ import kotlinx.coroutines.launch
 data class AuthUiState(
     val email: String = "",
     val pass: String = "",
-    val baseUrl: String = "http://10.0.2.2:3333/",
+    val baseUrl: String = TokenManager.DEFAULT_BASE_URL,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val isSuccess: Boolean = false

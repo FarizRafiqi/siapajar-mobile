@@ -15,17 +15,12 @@ import kotlinx.coroutines.launch
 
 data class HomeUiState(
     val teacherName: String = "Guru SiapAjar",
-    val schoolName: String = "TK Pembina",
+    val schoolName: String = "TK / RA SiapAjar",
     val activeClassName: String = "TK B1",
-    val todayAgenda: TodayAgenda = TodayAgenda(
-        topicTitle = "Mengenal Tanaman Obat & Apotek Hidup",
-        todayActivity = "Eksplorasi Daun Mint & Menggambar Bentuk Daun",
-        targetedTpCode = "TP 1.3",
-        targetedTpTitle = "Menjaga Kebersihan & Rasa Ingin Tahu"
-    ),
+    val todayAgenda: TodayAgenda? = null,
     val recentAssessments: List<Assessment> = emptyList(),
-    val totalRecordedToday: Int = 18,
-    val totalStudents: Int = 24,
+    val totalRecordedToday: Int = 0,
+    val totalStudents: Int = 0,
     val isSyncing: Boolean = false
 )
 
@@ -58,10 +53,28 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 if (agendaDto != null) {
                     _uiState.value = _uiState.value.copy(
                         todayAgenda = TodayAgenda(
+                            weekNumber = agendaDto.weekNumber,
+                            semesterNumber = agendaDto.semesterNumber,
                             topicTitle = agendaDto.topicTitle,
+                            subTopic = agendaDto.subTopic,
                             todayActivity = agendaDto.todayActivity,
                             targetedTpCode = agendaDto.targetedTpCode,
-                            targetedTpTitle = agendaDto.targetedTpTitle
+                            targetedTpTitle = agendaDto.targetedTpTitle,
+                            stage = agendaDto.stage,
+                            openingActivities = agendaDto.openingActivities,
+                            openingQuestions = agendaDto.openingQuestions,
+                            coreActivities = agendaDto.coreActivities.map {
+                                id.siapajar.app.domain.model.CoreActivity(
+                                    id = it.id,
+                                    name = it.name,
+                                    focus = it.focus,
+                                    materials = it.materials,
+                                    instructions = it.instructions,
+                                    benefits = it.benefits,
+                                    isPrimary = it.isPrimary
+                                )
+                            },
+                            closingActivities = agendaDto.closingActivities
                         )
                     )
                 }

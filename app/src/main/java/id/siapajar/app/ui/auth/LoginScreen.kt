@@ -1,20 +1,19 @@
 package id.siapajar.app.ui.auth
 
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.Login
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Visibility
@@ -26,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -40,6 +38,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import androidx.lifecycle.viewmodel.compose.viewModel
 import id.siapajar.app.theme.*
 
@@ -49,7 +48,7 @@ fun LoginScreen(
     viewModel: AuthViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val focusManager = LocalFocusManager()
+    val focusManager = LocalFocusManager.current
     val context = LocalContext.current
     var isPasswordVisible by remember { mutableStateOf(false) }
 
@@ -273,7 +272,7 @@ fun LoginScreen(
                             )
                         } else {
                             Icon(
-                                imageVector = Icons.Default.Login,
+                                imageVector = Icons.AutoMirrored.Filled.Login,
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -317,7 +316,7 @@ fun LoginScreen(
                         onClick = {
                             try {
                                 val googleAuthUrl = "${uiState.baseUrl}auth/google/redirect"
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(googleAuthUrl))
+                                val intent = Intent(Intent.ACTION_VIEW, googleAuthUrl.toUri())
                                 context.startActivity(intent)
                             } catch (_: Exception) {}
                         },
@@ -355,7 +354,6 @@ private fun GoogleLogoIcon(modifier: Modifier = Modifier) {
         val width = size.width
         val height = size.height
         val center = Offset(width / 2, height / 2)
-        val radius = width / 2
 
         // Red (Top)
         val redPath = Path().apply {

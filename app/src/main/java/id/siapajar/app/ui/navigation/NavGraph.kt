@@ -15,6 +15,7 @@ import id.siapajar.app.ui.attendance.AttendanceScreen
 import id.siapajar.app.ui.auth.LoginScreen
 import id.siapajar.app.ui.components.SiapAjarBottomBar
 import id.siapajar.app.ui.home.HomeScreen
+import id.siapajar.app.ui.rppm.RppmDetailScreen
 import id.siapajar.app.ui.student.StudentDetailScreen
 import id.siapajar.app.ui.student.StudentListScreen
 import kotlinx.coroutines.launch
@@ -47,6 +48,9 @@ fun SiapAjarNavGraph(navController: NavHostController = rememberNavController())
                     onNavigateAssessment = {
                         navController.navigate(Screen.QuickAssessment.route)
                     },
+                    onNavigateAttendance = {
+                        navController.navigate(Screen.Attendance.route)
+                    },
                     onNavigateStudents = {
                         navController.navigate(Screen.StudentList.route) {
                             popUpTo(Screen.StudentList.route) { inclusive = true }
@@ -77,6 +81,7 @@ fun SiapAjarNavGraph(navController: NavHostController = rememberNavController())
                 HomeScreen(
                     onNavigateAttendance = { navController.navigate(Screen.Attendance.route) },
                     onNavigateAssessment = { navController.navigate(Screen.QuickAssessment.route) },
+                    onNavigateRppmDetail = { navController.navigate(Screen.RppmDetail.route) },
                     onGenerateAiSummary = {
                         scope.launch {
                             snackbarHostState.showSnackbar("Membuat Rangkuman AI dari data asesmen minggu ini...")
@@ -86,6 +91,16 @@ fun SiapAjarNavGraph(navController: NavHostController = rememberNavController())
                         navController.navigate(Screen.Login.route) {
                             popUpTo(0) { inclusive = true }
                         }
+                    }
+                )
+            }
+
+            // 1.1. Detail Rencana Kegiatan & RPPM (Modul Ajar Harian)
+            composable(Screen.RppmDetail.route) {
+                RppmDetailScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateAssessment = { _ ->
+                        navController.navigate(Screen.QuickAssessment.route)
                     }
                 )
             }
