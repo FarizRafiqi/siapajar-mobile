@@ -6,7 +6,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -14,14 +16,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import kotlin.math.abs
 
-// Curated harmonious WhatsApp / Google style avatar colors
+// Curated harmonious WhatsApp / Material style avatar colors
 val AvatarColorPalette = listOf(
     Color(0xFF0284C7), // Sky Blue
     Color(0xFF059669), // Emerald
@@ -41,15 +41,6 @@ fun getAvatarColor(seed: String): Color {
     return AvatarColorPalette[hash % AvatarColorPalette.size]
 }
 
-fun getInitials(name: String): String {
-    val words = name.trim().split("\\s+".toRegex()).filter { it.isNotBlank() }
-    return when {
-        words.isEmpty() -> "?"
-        words.size == 1 -> words[0].take(2).uppercase()
-        else -> "${words[0].first()}${words[1].first()}".uppercase()
-    }
-}
-
 @Composable
 fun StudentAvatar(
     name: String,
@@ -60,8 +51,7 @@ fun StudentAvatar(
     modifier: Modifier = Modifier
 ) {
     val bgColor = getAvatarColor(name)
-    val initials = getInitials(name)
-    val fontSize = (size.value * 0.38f).sp
+    val iconSize = size * 0.72f
 
     Box(
         modifier = modifier
@@ -81,19 +71,21 @@ fun StudentAvatar(
             ),
         contentAlignment = Alignment.Center
     ) {
+        // WhatsApp-style default silhouette person icon (always present as base / fallback)
+        Icon(
+            imageVector = Icons.Default.Person,
+            contentDescription = name,
+            tint = Color.White.copy(alpha = 0.95f),
+            modifier = Modifier.size(iconSize)
+        )
+
+        // Photo overlay if available
         if (!photoUrl.isNullOrBlank()) {
             AsyncImage(
                 model = photoUrl,
                 contentDescription = name,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
-            )
-        } else {
-            Text(
-                text = initials,
-                color = Color.White,
-                fontSize = fontSize,
-                fontWeight = FontWeight.Bold
             )
         }
     }

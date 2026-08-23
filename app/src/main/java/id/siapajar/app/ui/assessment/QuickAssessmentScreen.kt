@@ -35,6 +35,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import id.siapajar.app.domain.model.InstrumentType
 import id.siapajar.app.theme.*
+import id.siapajar.app.ui.components.StudentAvatar
 import java.io.File
 import java.io.FileOutputStream
 
@@ -85,7 +86,7 @@ fun QuickAssessmentScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { viewModel.toggleStudentSelection(student.id) }
-                                .padding(vertical = 8.dp),
+                                .padding(vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Checkbox(
@@ -93,7 +94,13 @@ fun QuickAssessmentScreen(
                                 onCheckedChange = { viewModel.toggleStudentSelection(student.id) },
                                 colors = CheckboxDefaults.colors(checkedColor = EmeraldPrimary)
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            StudentAvatar(
+                                name = student.name,
+                                photoUrl = student.photoUrl,
+                                size = 36.dp
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
                             Text(
                                 text = student.name,
                                 fontSize = 14.sp,
@@ -399,24 +406,13 @@ fun QuickAssessmentScreen(
                         modifier = Modifier.clickable { viewModel.toggleStudentSelection(student.id) }
                     ) {
                         Box(contentAlignment = Alignment.BottomEnd) {
-                            Box(
-                                modifier = Modifier
-                                    .size(54.dp)
-                                    .clip(CircleShape)
-                                    .border(
-                                        width = if (isTagged) 2.5.dp else 1.dp,
-                                        color = if (isTagged) EmeraldPrimary else BorderSlate,
-                                        shape = CircleShape
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                AsyncImage(
-                                    model = student.photoUrl ?: "https://images.unsplash.com/photo-1595454223600-91fbdd77e268?w=150&auto=format&fit=crop&q=80",
-                                    contentDescription = student.name,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            }
+                            StudentAvatar(
+                                name = student.name,
+                                photoUrl = student.photoUrl,
+                                size = 54.dp,
+                                borderWidth = if (isTagged) 2.5.dp else 1.dp,
+                                borderColor = if (isTagged) EmeraldPrimary else BorderSlate
+                            )
 
                             if (isTagged) {
                                 Surface(
