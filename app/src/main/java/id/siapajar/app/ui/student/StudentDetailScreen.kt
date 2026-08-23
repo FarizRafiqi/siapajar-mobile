@@ -66,7 +66,7 @@ fun StudentDetailScreen(
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = CardSurface)
             )
         },
         floatingActionButton = {
@@ -101,7 +101,7 @@ fun StudentDetailScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFFAFAFA))
+                .background(CanvasBackground)
                 .padding(padding)
                 .padding(horizontal = 16.dp),
             contentPadding = PaddingValues(bottom = 80.dp)

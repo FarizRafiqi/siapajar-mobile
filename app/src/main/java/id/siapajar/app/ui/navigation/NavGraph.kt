@@ -45,8 +45,8 @@ fun SiapAjarNavGraph(navController: NavHostController = rememberNavController())
                             popUpTo(Screen.Home.route) { inclusive = true }
                         }
                     },
-                    onNavigateAssessment = {
-                        navController.navigate(Screen.QuickAssessment.route)
+                    onNavigateAssessment = { mode ->
+                        navController.navigate(Screen.QuickAssessment.createRoute(mode))
                     },
                     onNavigateAttendance = {
                         navController.navigate(Screen.Attendance.route)
@@ -80,7 +80,7 @@ fun SiapAjarNavGraph(navController: NavHostController = rememberNavController())
             composable(Screen.Home.route) {
                 HomeScreen(
                     onNavigateAttendance = { navController.navigate(Screen.Attendance.route) },
-                    onNavigateAssessment = { navController.navigate(Screen.QuickAssessment.route) },
+                    onNavigateAssessment = { navController.navigate(Screen.QuickAssessment.createRoute("camera")) },
                     onNavigateRppmDetail = { navController.navigate(Screen.RppmDetail.route) },
                     onGenerateAiSummary = {
                         scope.launch {
@@ -100,14 +100,24 @@ fun SiapAjarNavGraph(navController: NavHostController = rememberNavController())
                 RppmDetailScreen(
                     onNavigateBack = { navController.popBackStack() },
                     onNavigateAssessment = { _ ->
-                        navController.navigate(Screen.QuickAssessment.route)
+                        navController.navigate(Screen.QuickAssessment.createRoute("camera"))
                     }
                 )
             }
 
             // 2. Catat Asesmen Kegiatan
-            composable(Screen.QuickAssessment.route) {
+            composable(
+                route = Screen.QuickAssessment.route,
+                arguments = listOf(
+                    androidx.navigation.navArgument("mode") {
+                        type = androidx.navigation.NavType.StringType
+                        defaultValue = "default"
+                    }
+                )
+            ) { backStackEntry ->
+                val mode = backStackEntry.arguments?.getString("mode") ?: "default"
                 QuickAssessmentScreen(
+                    initialMode = mode,
                     onNavigateBack = { navController.popBackStack() },
                     onSaveSuccess = {
                         navController.popBackStack()

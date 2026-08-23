@@ -31,7 +31,7 @@ import id.siapajar.app.theme.*
 fun SiapAjarBottomBar(
     currentRoute: String,
     onNavigateHome: () -> Unit,
-    onNavigateAssessment: () -> Unit,
+    onNavigateAssessment: (mode: String) -> Unit,
     onNavigateAttendance: () -> Unit,
     onNavigateStudents: () -> Unit
 ) {
@@ -43,18 +43,14 @@ fun SiapAjarBottomBar(
             .navigationBarsPadding(),
         contentAlignment = Alignment.BottomCenter
     ) {
-        // 1. Bottom Bar Surface (Docked Card 72.dp height - Standard M3)
+        // 1. Bottom Bar Surface (Docked Flat Bar 72.dp height - Full Width Edge to Edge)
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(72.dp)
-                .shadow(
-                    elevation = 16.dp,
-                    shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
-                    spotColor = Color(0x26000000)
-                ),
-            shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp),
-            color = Color.White
+                .height(72.dp),
+            shape = androidx.compose.ui.graphics.RectangleShape,
+            color = CardSurface,
+            border = androidx.compose.foundation.BorderStroke(1.dp, BorderSlate)
         ) {
             Row(
                 modifier = Modifier
@@ -101,9 +97,9 @@ fun SiapAjarBottomBar(
                 .offset(y = (-22).dp)
                 .size(64.dp)
                 .shadow(
-                    elevation = 12.dp,
+                    elevation = 8.dp,
                     shape = CircleShape,
-                    spotColor = Color(0x4D000000)
+                    spotColor = Color(0x33000000)
                 )
                 .clip(CircleShape)
                 .background(
@@ -111,7 +107,7 @@ fun SiapAjarBottomBar(
                         colors = listOf(EmeraldLight, EmeraldPrimary, EmeraldDark)
                     )
                 )
-                .border(4.dp, Color.White, CircleShape)
+                .border(4.dp, CardSurface, CircleShape)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
@@ -132,7 +128,7 @@ fun SiapAjarBottomBar(
         ModalBottomSheet(
             onDismissRequest = { showQuickActions = false },
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            containerColor = Color.White,
+            containerColor = CardSurface,
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
             dragHandle = {
                 Surface(
@@ -172,7 +168,7 @@ fun SiapAjarBottomBar(
                     subtitle = "Jepret hasil karya atau dokumentasi aktivitas siswa",
                     onClick = {
                         showQuickActions = false
-                        onNavigateAssessment()
+                        onNavigateAssessment("camera")
                     }
                 )
 
@@ -187,7 +183,7 @@ fun SiapAjarBottomBar(
                     subtitle = "Catat peristiwa penting / capaian tujuan belajar anak",
                     onClick = {
                         showQuickActions = false
-                        onNavigateAssessment()
+                        onNavigateAssessment("anecdote")
                     }
                 )
 
@@ -202,7 +198,7 @@ fun SiapAjarBottomBar(
                     subtitle = "Pilih foto aktivitas yang tersimpan di HP",
                     onClick = {
                         showQuickActions = false
-                        onNavigateAssessment()
+                        onNavigateAssessment("gallery")
                     }
                 )
 

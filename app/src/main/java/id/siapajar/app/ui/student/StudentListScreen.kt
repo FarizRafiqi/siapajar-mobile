@@ -51,14 +51,14 @@ fun StudentListScreen(
                         color = TextPrimary
                     )
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = CardSurface)
             )
         }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFFAFAFA))
+                .background(CanvasBackground)
                 .padding(padding)
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {

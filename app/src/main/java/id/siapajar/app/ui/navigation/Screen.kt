@@ -3,7 +3,9 @@ package id.siapajar.app.ui.navigation
 sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Home : Screen("home")
-    object QuickAssessment : Screen("quick_assessment")
+    object QuickAssessment : Screen("quick_assessment?mode={mode}") {
+        fun createRoute(mode: String = "default") = "quick_assessment?mode=$mode"
+    }
     object Attendance : Screen("attendance")
     object StudentList : Screen("student_list")
     object RppmDetail : Screen("rppm_detail")

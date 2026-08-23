@@ -49,6 +49,7 @@ import java.io.FileOutputStream
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuickAssessmentScreen(
+    initialMode: String = "default",
     onNavigateBack: () -> Unit,
     onSaveSuccess: () -> Unit,
     viewModel: AssessmentViewModel = viewModel()
@@ -128,6 +129,28 @@ fun QuickAssessmentScreen(
             galleryLauncher.launch("image/*")
         } else {
             requestStoragePermissionLauncher.launch(storagePermission)
+        }
+    }
+
+    // Auto-launch camera / gallery or preselect mode on navigation entry
+    var hasLaunchedInitialMode by remember { mutableStateOf(false) }
+
+    LaunchedEffect(initialMode) {
+        if (!hasLaunchedInitialMode) {
+            hasLaunchedInitialMode = true
+            when (initialMode) {
+                "camera" -> {
+                    viewModel.setInstrument(InstrumentType.HASIL_KARYA)
+                    openCamera()
+                }
+                "gallery" -> {
+                    viewModel.setInstrument(InstrumentType.HASIL_KARYA)
+                    openGallery()
+                }
+                "anecdote" -> {
+                    viewModel.setInstrument(InstrumentType.CATATAN_ANEKDOT)
+                }
+            }
         }
     }
 
@@ -255,7 +278,7 @@ fun QuickAssessmentScreen(
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = CardSurface)
             )
         },
         bottomBar = {
@@ -263,16 +286,24 @@ fun QuickAssessmentScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .shadow(8.dp),
-                color = Color.White
+                color = CardSurface,
+                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSlate)
             ) {
                 Box(modifier = Modifier.padding(16.dp)) {
+                    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+                    val canSubmit = !uiState.isLoading && uiState.availableStudents.isNotEmpty() && uiState.selectedStudentIds.isNotEmpty()
+
                     Button(
                         onClick = { viewModel.saveAssessment(onSaveSuccess) },
-                        enabled = !uiState.isLoading,
+                        enabled = canSubmit,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = EmeraldPrimary,
+                            disabledContainerColor = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0),
+                            disabledContentColor = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+                        ),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         if (uiState.isLoading) {
@@ -283,10 +314,10 @@ fun QuickAssessmentScreen(
                             )
                         } else {
                             Text(
-                                text = "Simpan Asesmen",
+                                text = if (uiState.availableStudents.isEmpty()) "Belum Ada Siswa" else "Simpan Asesmen",
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                color = if (canSubmit) Color.White else (if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8))
                             )
                         }
                     }
@@ -297,45 +328,104 @@ fun QuickAssessmentScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFFAFAFA))
+                .background(CanvasBackground)
                 .padding(padding)
                 .verticalScroll(scrollState)
                 .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-            // 1. Photo Hero Container (Tappable to Take Photo)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(Color(0xFFE2E8F0))
-                    .clickable { openCamera() },
-                contentAlignment = Alignment.Center
-            ) {
-                val photoModel = uiState.photoPath ?: "https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=800&auto=format&fit=crop&q=80"
-                AsyncImage(
-                    model = photoModel,
-                    contentDescription = "Foto Asesmen",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-
-                // Quick camera overlay badge
-                Surface(
-                    color = Color.Black.copy(alpha = 0.5f),
-                    shape = CircleShape,
+            // 1. Photo Hero Container (Tappable to Take Photo / Choose Gallery)
+            if (uiState.photoPath != null) {
+                Box(
                     modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(12.dp)
+                        .fillMaxWidth()
+                        .height(220.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(CardSurface)
+                        .border(1.dp, BorderSlate, RoundedCornerShape(18.dp))
+                        .clickable { openCamera() },
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.PhotoCamera,
-                        contentDescription = "Ambil Foto",
-                        tint = Color.White,
-                        modifier = Modifier
-                            .padding(8.dp)
-                            .size(20.dp)
+                    AsyncImage(
+                        model = uiState.photoPath,
+                        contentDescription = "Foto Asesmen",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
                     )
+
+                    // Quick camera overlay badge
+                    Surface(
+                        color = Color.Black.copy(alpha = 0.55f),
+                        shape = CircleShape,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PhotoCamera,
+                                contentDescription = "Ganti Foto",
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Ganti",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+            } else {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(180.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .clickable { openCamera() },
+                    shape = RoundedCornerShape(18.dp),
+                    color = CardSurface,
+                    border = androidx.compose.foundation.BorderStroke(1.5.dp, EmeraldLight.copy(alpha = 0.4f))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(54.dp)
+                                .background(MintSurface, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AddAPhoto,
+                                contentDescription = null,
+                                tint = EmeraldPrimary,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = "Ambil Foto Hasil Karya / Aktivitas",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(3.dp))
+                        Text(
+                            text = "Ketuk untuk membuka kamera langsung",
+                            fontSize = 12.sp,
+                            color = TextMuted,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
 
@@ -368,7 +458,7 @@ fun QuickAssessmentScreen(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Ambil Foto",
+                            text = if (uiState.photoPath != null) "Ulangi Foto" else "Ambil Foto",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = EmeraldPrimary
@@ -647,8 +737,8 @@ fun QuickAssessmentScreen(
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = EmeraldPrimary,
                     unfocusedBorderColor = BorderSlate,
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White
+                    focusedContainerColor = CardSurface,
+                    unfocusedContainerColor = CardSurface
                 )
             )
 
