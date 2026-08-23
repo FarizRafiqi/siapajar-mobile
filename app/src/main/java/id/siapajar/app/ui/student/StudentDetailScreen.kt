@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import id.siapajar.app.theme.*
+import id.siapajar.app.ui.components.StudentAvatar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,7 +52,7 @@ fun StudentDetailScreen(
                             modifier = Modifier.size(32.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.ArrowBack,
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                 contentDescription = "Kembali",
                                 tint = TextPrimary
                             )
@@ -112,21 +114,13 @@ fun StudentDetailScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(92.dp)
-                            .clip(CircleShape)
-                            .border(3.dp, EmeraldPrimary, CircleShape)
-                            .background(MintSurface),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        AsyncImage(
-                            model = uiState.avatarUrl,
-                            contentDescription = uiState.studentName,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    }
+                    StudentAvatar(
+                        name = uiState.studentName,
+                        photoUrl = uiState.avatarUrl,
+                        size = 92.dp,
+                        borderWidth = 3.dp,
+                        borderColor = EmeraldPrimary
+                    )
 
                     Spacer(modifier = Modifier.height(12.dp))
 

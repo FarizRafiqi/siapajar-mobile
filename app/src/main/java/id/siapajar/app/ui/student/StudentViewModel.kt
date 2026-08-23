@@ -5,19 +5,37 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import id.siapajar.app.data.local.SiapAjarDatabase
 import id.siapajar.app.data.remote.StudentTimelineDto
+import id.siapajar.app.data.repository.AssessmentRepository
 import id.siapajar.app.data.repository.StudentRepository
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+data class StudentListItem(
+    val id: String,
+    val name: String,
+    val nis: String,
+    val ageText: String = "5-6 Tahun",
+    val avatarUrl: String? = null,
+    val assessmentCount: Int = 0,
+    val lastAssessmentDate: String = "Tersimpan"
+)
+
+data class StudentListUiState(
+    val students: List<StudentListItem> = emptyList(),
+    val className: String = "Kelompok B (TK B1)",
+    val totalStudents: Int = 0,
+    val isLoading: Boolean = false,
+    val searchQuery: String = ""
+)
+
 data class StudentDetailUiState(
-    val studentName: String = "Aisyah Putri Azzahra",
-    val nis: String = "202602",
+    val id: String = "1",
+    val studentName: String = "Siswa",
+    val nis: String = "-",
     val classText: String = "TK B1",
-    val ageText: String = "5 Tahun 4 Bulan",
-    val avatarUrl: String = "https://images.unsplash.com/photo-1595454223600-91fbdd77e268?w=300&auto=format&fit=crop&q=80",
-    val totalAssessments: Int = 8,
+    val ageText: String = "5-6 Tahun",
+    val avatarUrl: String? = null,
+    val totalAssessments: Int = 0,
     val selectedFilter: String = "Semua",
     val timeline: List<StudentTimelineDto> = emptyList(),
     val isLoading: Boolean = false
@@ -26,43 +44,86 @@ data class StudentDetailUiState(
 class StudentViewModel(application: Application) : AndroidViewModel(application) {
     private val db = SiapAjarDatabase.getDatabase(application)
     private val studentRepo = StudentRepository(db.studentDao(), application)
+    private val assessmentRepo = AssessmentRepository(db.assessmentDao(), application)
+
+    private val _listState = MutableStateFlow(StudentListUiState(isLoading = true))
+    val listState: StateFlow<StudentListUiState> = _listState.asStateFlow()
 
     private val _detailState = MutableStateFlow(StudentDetailUiState())
     val detailState: StateFlow<StudentDetailUiState> = _detailState.asStateFlow()
 
+    init {
+        loadStudents()
+    }
+
+    fun loadStudents(classId: String = "1") {
+        viewModelScope.launch {
+            _listState.value = _listState.value.copy(isLoading = true)
+
+            // 1. Sync fresh student list from API to Room
+            try {
+                studentRepo.fetchStudentsFromApi(classId)
+            } catch (_: Exception) {}
+
+            // 2. Observe local Room database students & local assessments
+            combine(
+                studentRepo.getStudentsByClass(classId),
+                assessmentRepo.getAllAssessments()
+            ) { studentEntities, allAssessments ->
+                val items = studentEntities.map { student ->
+                    val count = allAssessments.count { it.studentIds.contains(student.id) }
+                    StudentListItem(
+                        id = student.id,
+                        name = student.name,
+                        nis = student.nis,
+                        ageText = "5-6 Tahun",
+                        avatarUrl = student.photoUrl,
+                        assessmentCount = count,
+                        lastAssessmentDate = if (count > 0) "Tercatat" else "Belum ada"
+                    )
+                }
+                items
+            }.collect { items ->
+                _listState.value = _listState.value.copy(
+                    students = items,
+                    totalStudents = items.size,
+                    isLoading = false
+                )
+            }
+        }
+    }
+
+    fun onSearchQueryChanged(query: String) {
+        _listState.value = _listState.value.copy(searchQuery = query)
+    }
+
     fun loadStudentDetail(studentId: String) {
         viewModelScope.launch {
             _detailState.value = _detailState.value.copy(isLoading = true)
-            val timeline = studentRepo.fetchStudentTimeline(studentId)
 
-            val studentName = when (studentId) {
-                "2" -> "Kenzo Alvaro"
-                "3" -> "Ahmad Rayhan"
-                "4" -> "Bilqis Humaira"
-                "5" -> "Fathir Rahman"
-                else -> "Aisyah Putri Azzahra"
+            // 1. Query local Room database for student basic info
+            val localStudent = db.studentDao().getStudentById(studentId)
+            val studentName = localStudent?.name ?: "Siswa"
+            val nis = localStudent?.nis ?: "-"
+            val avatar = localStudent?.photoUrl
+
+            // 2. Fetch timeline from API
+            val apiTimeline = try {
+                studentRepo.fetchStudentTimeline(studentId)
+            } catch (_: Exception) {
+                emptyList()
             }
-            val nis = when (studentId) {
-                "2" -> "202603"
-                "3" -> "202601"
-                "4" -> "202604"
-                "5" -> "202605"
-                else -> "202602"
-            }
-            val avatar = when (studentId) {
-                "2" -> "https://images.unsplash.com/photo-1543332164-6e82f355badc?w=300&auto=format&fit=crop&q=80"
-                "3" -> "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=300&auto=format&fit=crop&q=80"
-                "4" -> "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=300&auto=format&fit=crop&q=80"
-                "5" -> "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80"
-                else -> "https://images.unsplash.com/photo-1595454223600-91fbdd77e268?w=300&auto=format&fit=crop&q=80"
-            }
+
+            // 3. Collect local assessments for this student
+            assessmentRepo.getAssessmentsForStudent(studentId).firstOrNull()
 
             _detailState.value = _detailState.value.copy(
+                id = studentId,
                 studentName = studentName,
                 nis = nis,
                 avatarUrl = avatar,
-                timeline = timeline,
-                totalAssessments = if (timeline.isNotEmpty()) timeline.size else 8,
+                timeline = apiTimeline,
+                totalAssessments = if (apiTimeline.isNotEmpty()) apiTimeline.size else 0,
                 isLoading = false
             )
         }
