@@ -303,7 +303,7 @@ class StudentRepository(
                         nis = it.nis,
                         photoUrl = it.avatarUrl,
                         classId = it.classId,
-                        className = "TK B1"
+                        className = it.className ?: "Kelompok B1"
                     )
                 }
                 studentDao.insertStudents(entities)

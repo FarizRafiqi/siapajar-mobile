@@ -49,6 +49,13 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
             // Fetch active classes & today's agenda from API
             try {
+                val classes = studentRepo.fetchClasses()
+                if (classes.isNotEmpty()) {
+                    val activeClass = classes.first()
+                    val displayName = activeClass.displayName ?: activeClass.name
+                    _uiState.value = _uiState.value.copy(activeClassName = displayName)
+                }
+
                 val agendaDto = studentRepo.fetchTodayAgenda("1")
                 if (agendaDto != null) {
                     _uiState.value = _uiState.value.copy(

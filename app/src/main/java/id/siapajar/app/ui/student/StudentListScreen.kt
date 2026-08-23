@@ -3,6 +3,7 @@ package id.siapajar.app.ui.student
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -29,6 +30,7 @@ fun StudentListScreen(
     viewModel: StudentViewModel = viewModel()
 ) {
     val uiState by viewModel.listState.collectAsState()
+    val isDark = isSystemInDarkTheme()
 
     val filteredStudents = remember(uiState.students, uiState.searchQuery) {
         if (uiState.searchQuery.isBlank()) {
@@ -94,8 +96,10 @@ fun StudentListScreen(
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = EmeraldPrimary,
                     unfocusedBorderColor = BorderSlate,
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White
+                    focusedContainerColor = CardSurface,
+                    unfocusedContainerColor = CardSurface,
+                    focusedTextColor = TextPrimary,
+                    unfocusedTextColor = TextPrimary
                 ),
                 singleLine = true
             )
@@ -137,7 +141,7 @@ fun StudentListScreen(
                         Icon(
                             imageVector = Icons.Default.PersonOutline,
                             contentDescription = null,
-                            tint = Slate400,
+                            tint = TextMuted,
                             modifier = Modifier.size(48.dp)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
@@ -161,7 +165,7 @@ fun StudentListScreen(
                                 .clip(RoundedCornerShape(14.dp))
                                 .border(1.dp, BorderSlate, RoundedCornerShape(14.dp))
                                 .clickable { onSelectStudent(student.id) },
-                            color = Color.White
+                            color = CardSurface
                         ) {
                             Row(
                                 modifier = Modifier.padding(14.dp),
@@ -203,13 +207,14 @@ fun StudentListScreen(
                                 ) {
                                     Surface(
                                         color = MintSurface,
-                                        shape = RoundedCornerShape(6.dp)
+                                        shape = RoundedCornerShape(6.dp),
+                                        border = androidx.compose.foundation.BorderStroke(1.dp, EmeraldLight.copy(alpha = 0.3f))
                                     ) {
                                         Text(
                                             text = "${student.assessmentCount} Asesmen",
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.SemiBold,
-                                            color = EmeraldDark,
+                                            color = if (isDark) Color(0xFF6EE7B7) else EmeraldDark,
                                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                         )
                                     }

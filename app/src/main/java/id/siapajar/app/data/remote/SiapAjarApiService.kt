@@ -36,8 +36,10 @@ data class UserProfileDto(
 data class ClassDto(
     val id: String,
     val name: String,
+    val displayName: String? = null,
     val gradeLevel: Int? = null,
     val groupContext: String? = null,
+    val rombelNumber: String? = null,
     val studentCount: Int = 0
 )
 
@@ -48,6 +50,7 @@ data class StudentDto(
     val nis: String,
     val nisn: String? = null,
     val classId: String,
+    val className: String? = null,
     val assessmentCount: Int = 0,
     val avatarUrl: String? = null
 )

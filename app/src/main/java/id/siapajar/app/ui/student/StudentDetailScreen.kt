@@ -3,6 +3,7 @@ package id.siapajar.app.ui.student
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -36,6 +37,7 @@ fun StudentDetailScreen(
     viewModel: StudentViewModel = viewModel()
 ) {
     val uiState by viewModel.detailState.collectAsState()
+    val isDark = isSystemInDarkTheme()
     val filterOptions = listOf("Semua", "Catatan Anekdot", "Hasil Karya", "Foto Berseri")
 
     LaunchedEffect(studentId) {
@@ -134,7 +136,8 @@ fun StudentDetailScreen(
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Surface(
-                        color = Color(0xFFF1F5F9),
+                        color = CardSurface,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderSlate),
                         shape = RoundedCornerShape(14.dp)
                     ) {
                         Text(
@@ -162,7 +165,7 @@ fun StudentDetailScreen(
                                     color = if (isSelected) EmeraldPrimary else BorderSlate,
                                     shape = RoundedCornerShape(20.dp)
                                 ),
-                            color = if (isSelected) EmeraldPrimary else Color.White
+                            color = if (isSelected) EmeraldPrimary else CardSurface
                         ) {
                             Text(
                                 text = option,
@@ -237,6 +240,7 @@ private fun TimelineItemCard(
     notes: String,
     tpText: String
 ) {
+    val isDark = isSystemInDarkTheme()
     Row(modifier = Modifier.fillMaxWidth()) {
         // Timeline indicator (Dot + vertical line)
         Column(
@@ -265,7 +269,7 @@ private fun TimelineItemCard(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(14.dp))
                 .border(1.dp, BorderSlate, RoundedCornerShape(14.dp)),
-            color = Color.White
+            color = CardSurface
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
                 Row(
@@ -305,7 +309,7 @@ private fun TimelineItemCard(
                             .fillMaxWidth()
                             .height(160.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFFF8FAFC))
+                            .background(CanvasBackground)
                     ) {
                         AsyncImage(
                             model = photoUrl,
@@ -330,13 +334,13 @@ private fun TimelineItemCard(
                 Surface(
                     color = MintSurface,
                     shape = RoundedCornerShape(8.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, EmeraldLight.copy(alpha = 0.5f))
+                    border = androidx.compose.foundation.BorderStroke(1.dp, EmeraldLight.copy(alpha = 0.35f))
                 ) {
                     Text(
                         text = tpText,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
-                        color = EmeraldDark,
+                        color = if (isDark) Color(0xFF6EE7B7) else EmeraldDark,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                     )
                 }

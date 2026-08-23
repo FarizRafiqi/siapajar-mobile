@@ -60,16 +60,31 @@ class StudentViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             _listState.value = _listState.value.copy(isLoading = true)
 
-            // 1. Sync fresh student list from API to Room
+            // 1. Fetch classes to get proper display name
+            try {
+                val classes = studentRepo.fetchClasses()
+                val activeClass = classes.find { it.id == classId } ?: classes.firstOrNull()
+                if (activeClass != null) {
+                    val displayName = activeClass.displayName ?: activeClass.name
+                    _listState.value = _listState.value.copy(className = displayName)
+                }
+            } catch (_: Exception) {}
+
+            // 2. Sync fresh student list from API to Room
             try {
                 studentRepo.fetchStudentsFromApi(classId)
             } catch (_: Exception) {}
 
-            // 2. Observe local Room database students & local assessments
+            // 3. Observe local Room database students & local assessments
             combine(
                 studentRepo.getStudentsByClass(classId),
                 assessmentRepo.getAllAssessments()
             ) { studentEntities, allAssessments ->
+                if (studentEntities.isNotEmpty() && _listState.value.className == "Kelompok B (TK B1)") {
+                    studentEntities.firstOrNull()?.className?.let { name ->
+                        _listState.value = _listState.value.copy(className = name)
+                    }
+                }
                 val items = studentEntities.map { student ->
                     val count = allAssessments.count { it.studentIds.contains(student.id) }
                     StudentListItem(
@@ -106,6 +121,7 @@ class StudentViewModel(application: Application) : AndroidViewModel(application)
             val studentName = localStudent?.name ?: "Siswa"
             val nis = localStudent?.nis ?: "-"
             val avatar = localStudent?.photoUrl
+            val classText = localStudent?.className ?: "TK B1"
 
             // 2. Fetch timeline from API
             val apiTimeline = try {
@@ -121,6 +137,7 @@ class StudentViewModel(application: Application) : AndroidViewModel(application)
                 id = studentId,
                 studentName = studentName,
                 nis = nis,
+                classText = classText,
                 avatarUrl = avatar,
                 timeline = apiTimeline,
                 totalAssessments = if (apiTimeline.isNotEmpty()) apiTimeline.size else 0,
