@@ -22,6 +22,9 @@ import id.siapajar.app.ui.student.StudentDetailScreen
 import id.siapajar.app.ui.student.StudentListScreen
 import kotlinx.coroutines.launch
 
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.padding
+
 @Composable
 fun SiapAjarNavGraph(navController: NavHostController = rememberNavController()) {
     val context = LocalContext.current
@@ -36,6 +39,7 @@ fun SiapAjarNavGraph(navController: NavHostController = rememberNavController())
     val scope = rememberCoroutineScope()
 
     Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             // Show bottom bar on Home, Student List, and Student Detail
@@ -65,7 +69,7 @@ fun SiapAjarNavGraph(navController: NavHostController = rememberNavController())
         NavHost(
             navController = navController,
             startDestination = initialDestination,
-            modifier = Modifier.padding(padding)
+            modifier = Modifier.padding(bottom = padding.calculateBottomPadding())
         ) {
             // 0. Login Screen
             composable(Screen.Login.route) {

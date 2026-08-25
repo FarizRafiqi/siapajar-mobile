@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.foundation.isSystemInDarkTheme
 import coil3.compose.AsyncImage
 import id.siapajar.app.theme.*
 
@@ -37,19 +38,21 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
+    val isDark = isSystemInDarkTheme()
 
     // Modal Bottom Sheet Pilih Kelas Binaan
     if (uiState.showClassPicker) {
         ModalBottomSheet(
             onDismissRequest = { viewModel.setShowClassPicker(false) },
             containerColor = CardSurface,
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            dragHandle = { BottomSheetDefaults.DragHandle() }
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
-                    .padding(bottom = 32.dp)
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 36.dp)
             ) {
                 Text(
                     text = "Ganti Kelas Binaan",
@@ -64,59 +67,91 @@ fun HomeScreen(
                     modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
                 )
 
-                val classList = if (uiState.availableClasses.isNotEmpty()) {
-                    uiState.availableClasses
-                } else {
-                    listOf(
-                        id.siapajar.app.data.remote.ClassDto(id = "1", name = "TK B1", displayName = "TK B1 (Al-Kautsar)"),
-                        id.siapajar.app.data.remote.ClassDto(id = "2", name = "TK B2", displayName = "TK B2 (Al-Fath)"),
-                        id.siapajar.app.data.remote.ClassDto(id = "3", name = "TK A", displayName = "TK A (An-Nur)")
-                    )
-                }
-
-                classList.forEach { classDto ->
-                    val displayName = classDto.displayName ?: classDto.name
-                    val isSelected = displayName == uiState.activeClassName
-
+                if (uiState.availableClasses.isEmpty()) {
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { viewModel.selectClass(classDto) },
-                        color = if (isSelected) MintSurface else CanvasBackground,
-                        border = androidx.compose.foundation.BorderStroke(
-                            1.dp,
-                            if (isSelected) EmeraldPrimary else BorderSlate
-                        )
+                            .padding(vertical = 6.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        color = CanvasBackground,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderSlate)
                     ) {
-                        Row(
-                            modifier = Modifier.padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.School,
-                                    contentDescription = null,
-                                    tint = if (isSelected) EmeraldPrimary else TextSecondary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = displayName,
-                                    fontSize = 14.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) EmeraldDark else TextPrimary
-                                )
-                            }
-                            if (isSelected) {
-                                Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = null,
-                                    tint = EmeraldPrimary,
-                                    modifier = Modifier.size(20.dp)
-                                )
+                            Icon(
+                                imageVector = Icons.Default.SearchOff,
+                                contentDescription = null,
+                                tint = TextSecondary.copy(alpha = 0.6f),
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Tidak ada kelas ditemukan",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = "Data kelas akan muncul saat terdaftar di akun Anda.",
+                                fontSize = 12.sp,
+                                color = TextSecondary
+                            )
+                        }
+                    }
+                } else {
+                    uiState.availableClasses.forEach { classDto ->
+                        val displayName = classDto.displayName ?: classDto.name
+                        val isSelected = displayName == uiState.activeClassName
+
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 5.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (isSelected) MintSurface else CanvasBackground,
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (isSelected) EmeraldPrimary else BorderSlate
+                            ),
+                            onClick = { viewModel.selectClass(classDto) }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.School,
+                                        contentDescription = null,
+                                        tint = if (isSelected) EmeraldPrimary else TextSecondary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        text = displayName,
+                                        fontSize = 14.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) EmeraldDark else TextPrimary
+                                    )
+                                }
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = null,
+                                        tint = EmeraldPrimary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -129,6 +164,7 @@ fun HomeScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(CanvasBackground)
+            .statusBarsPadding()
             .verticalScroll(scrollState)
             .padding(horizontal = 16.dp, vertical = 16.dp)
     ) {
@@ -236,12 +272,11 @@ fun HomeScreen(
 
         // Class Switcher Dropdown Button
         Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .border(1.dp, BorderSlate, RoundedCornerShape(12.dp))
-                .clickable { viewModel.setShowClassPicker(true) },
-            color = CardSurface
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, BorderSlate),
+            color = CardSurface,
+            onClick = { viewModel.setShowClassPicker(true) }
         ) {
             Row(
                 modifier = Modifier
@@ -276,116 +311,162 @@ fun HomeScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 3. Hero Card: "Agenda Hari Ini" (Clickable to RppmDetail)
+        // 3. Hero Card: "Agenda Hari Ini" (Clickable to RppmDetail) or Empty State
         val agenda = uiState.todayAgenda
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(EmeraldPrimary, EmeraldDark)
+        if (agenda.topicTitle.isNotBlank()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(EmeraldPrimary, EmeraldDark)
+                        )
                     )
-                )
-                .clickable { onNavigateRppmDetail() }
-                .padding(18.dp)
-        ) {
-            Column {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Agenda Hari Ini",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White.copy(alpha = 0.95f)
-                    )
-
-                    Surface(
-                        color = Color.White.copy(alpha = 0.2f),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Text(
-                            text = "Minggu ${agenda.weekNumber} • Semester ${agenda.semesterNumber}",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color.White,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Text(
-                    text = "TOPIK",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MintSurface,
-                    letterSpacing = 1.sp
-                )
-                Text(
-                    text = agenda.topicTitle,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-
-                if (agenda.todayActivity.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(6.dp))
+                    .clickable { onNavigateRppmDetail() }
+                    .padding(18.dp)
+            ) {
+                Column {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.LocalFlorist,
-                            contentDescription = null,
-                            tint = MintSurface,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = agenda.todayActivity,
-                            fontSize = 13.sp,
-                            color = Color.White.copy(alpha = 0.9f),
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Surface(
-                    color = Color.Black.copy(alpha = 0.15f),
-                    shape = RoundedCornerShape(10.dp),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.15f))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Flag,
-                            contentDescription = null,
-                            tint = MintSurface,
-                            modifier = Modifier.size(15.dp)
+                        Text(
+                            text = "Agenda Hari Ini",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White.copy(alpha = 0.95f)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Column {
+
+                        Surface(
+                            color = Color.White.copy(alpha = 0.2f),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
                             Text(
-                                text = "Tujuan Pembelajaran",
-                                fontSize = 10.sp,
-                                color = MintSurface,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "${agenda.targetedTpCode} - ${agenda.targetedTpTitle}".trim(' ', '-'),
-                                fontSize = 12.sp,
+                                text = "Minggu ${agenda.weekNumber} • Semester ${agenda.semesterNumber}",
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium,
-                                color = Color.White
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                             )
                         }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Text(
+                        text = "TOPIK",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MintSurface,
+                        letterSpacing = 1.sp
+                    )
+                    Text(
+                        text = agenda.topicTitle,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+
+                    if (agenda.todayActivity.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.LocalFlorist,
+                                contentDescription = null,
+                                tint = MintSurface,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = agenda.todayActivity,
+                                fontSize = 13.sp,
+                                color = Color.White.copy(alpha = 0.9f),
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Surface(
+                        color = Color.Black.copy(alpha = 0.15f),
+                        shape = RoundedCornerShape(10.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.15f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Flag,
+                                contentDescription = null,
+                                tint = MintSurface,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Column {
+                                Text(
+                                    text = "Tujuan Pembelajaran",
+                                    fontSize = 10.sp,
+                                    color = MintSurface,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "${agenda.targetedTpCode} - ${agenda.targetedTpTitle}".trim(' ', '-'),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .border(1.dp, BorderSlate, RoundedCornerShape(20.dp))
+                    .clickable { onNavigateRppmDetail() },
+                color = CardSurface
+            ) {
+                Row(
+                    modifier = Modifier.padding(18.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(MintSurface),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MenuBook,
+                            contentDescription = null,
+                            tint = EmeraldDark,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Belum Ada RPPM Hari Ini",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Rencana modul mingguan belum diterbitkan untuk kelas ini.",
+                            fontSize = 12.sp,
+                            color = TextSecondary
+                        )
                     }
                 }
             }
