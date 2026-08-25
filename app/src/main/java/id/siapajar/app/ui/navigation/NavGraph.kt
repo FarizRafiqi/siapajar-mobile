@@ -10,12 +10,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.*
 import id.siapajar.app.data.local.TokenManager
+import id.siapajar.app.ui.assessment.AssessmentProgressDetailScreen
 import id.siapajar.app.ui.assessment.QuickAssessmentScreen
 import id.siapajar.app.ui.attendance.AttendanceScreen
 import id.siapajar.app.ui.auth.LoginScreen
 import id.siapajar.app.ui.components.SiapAjarBottomBar
 import id.siapajar.app.ui.home.HomeScreen
 import id.siapajar.app.ui.rppm.RppmDetailScreen
+import id.siapajar.app.ui.settings.SettingsScreen
 import id.siapajar.app.ui.student.StudentDetailScreen
 import id.siapajar.app.ui.student.StudentListScreen
 import kotlinx.coroutines.launch
@@ -36,7 +38,7 @@ fun SiapAjarNavGraph(navController: NavHostController = rememberNavController())
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
-            // Show bottom bar only on Home, Student List, and Student Detail
+            // Show bottom bar on Home, Student List, and Student Detail
             if (currentRoute == Screen.Home.route || currentRoute == Screen.StudentList.route || currentRoute.startsWith("student_detail")) {
                 SiapAjarBottomBar(
                     currentRoute = currentRoute,
@@ -80,16 +82,42 @@ fun SiapAjarNavGraph(navController: NavHostController = rememberNavController())
             composable(Screen.Home.route) {
                 HomeScreen(
                     onNavigateAttendance = { navController.navigate(Screen.Attendance.route) },
-                    onNavigateAssessment = { navController.navigate(Screen.QuickAssessment.createRoute("camera")) },
+                    onNavigateSettings = { navController.navigate(Screen.Settings.route) },
+                    onNavigateAssessmentProgress = { navController.navigate(Screen.AssessmentProgressDetail.route) },
                     onNavigateRppmDetail = { navController.navigate(Screen.RppmDetail.route) },
                     onGenerateAiSummary = {
                         scope.launch {
                             snackbarHostState.showSnackbar("Membuat Rangkuman AI dari data asesmen minggu ini...")
                         }
-                    },
-                    onLogout = {
+                    }
+                )
+            }
+
+            // 1.1. Pengaturan & Akun
+            composable(Screen.Settings.route) {
+                SettingsScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onLogoutSuccess = {
                         navController.navigate(Screen.Login.route) {
                             popUpTo(0) { inclusive = true }
+                        }
+                    }
+                )
+            }
+
+            // 1.2. Detail Progres Asesmen Mingguan
+            composable(Screen.AssessmentProgressDetail.route) {
+                AssessmentProgressDetailScreen(
+                    onNavigateBack = { navController.popBackStack() },
+                    onNavigateCapture = { studentId ->
+                        navController.navigate(Screen.QuickAssessment.createRoute("camera"))
+                    },
+                    onNavigateStudentDetail = { studentId ->
+                        navController.navigate(Screen.StudentDetail.createRoute(studentId))
+                    },
+                    onGenerateAiSummary = {
+                        scope.launch {
+                            snackbarHostState.showSnackbar("Membuat Rangkuman AI dari data asesmen minggu ini...")
                         }
                     }
                 )

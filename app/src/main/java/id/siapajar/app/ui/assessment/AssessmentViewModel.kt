@@ -39,9 +39,8 @@ class AssessmentViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     private fun loadStudents() {
+        // 1. Immediately collect from local Room database
         viewModelScope.launch {
-            // Fetch from API and sync to Room
-            studentRepo.fetchStudentsFromApi("1")
             studentRepo.getStudentsByClass("1").collect { list ->
                 _uiState.value = _uiState.value.copy(
                     availableStudents = list,
@@ -53,6 +52,13 @@ class AssessmentViewModel(application: Application) : AndroidViewModel(applicati
                     }
                 )
             }
+        }
+
+        // 2. Background sync in parallel
+        viewModelScope.launch {
+            try {
+                studentRepo.fetchStudentsFromApi("1")
+            } catch (_: Exception) {}
         }
     }
 

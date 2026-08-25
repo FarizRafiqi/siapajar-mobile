@@ -41,7 +41,6 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
 
     private fun loadStudents() {
         viewModelScope.launch {
-            studentRepo.fetchStudentsFromApi("1")
             studentRepo.getStudentsByClass("1").collect { list ->
                 _uiState.value = _uiState.value.copy(
                     students = list.map {
@@ -49,6 +48,11 @@ class AttendanceViewModel(application: Application) : AndroidViewModel(applicati
                     }
                 )
             }
+        }
+        viewModelScope.launch {
+            try {
+                studentRepo.fetchStudentsFromApi("1")
+            } catch (_: Exception) {}
         }
     }
 

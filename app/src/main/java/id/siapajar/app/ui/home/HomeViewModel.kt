@@ -14,14 +14,20 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 data class HomeUiState(
-    val teacherName: String = "Guru SiapAjar",
-    val schoolName: String = "TK / RA SiapAjar",
-    val activeClassName: String = "TK B1",
-    val todayAgenda: TodayAgenda? = null,
+    val teacherName: String = "Bapak/Ibu Guru",
+    val schoolName: String = "SiapAjar",
+    val activeClassName: String = "Kelompok B",
+    val activeClassId: String = "1",
+    val availableClasses: List<id.siapajar.app.data.remote.ClassDto> = emptyList(),
+    val todayAgenda: TodayAgenda = TodayAgenda(),
     val recentAssessments: List<Assessment> = emptyList(),
     val totalRecordedToday: Int = 0,
     val totalStudents: Int = 0,
-    val isSyncing: Boolean = false
+    val presentCount: Int = 0,
+    val unrecordedCount: Int = 0,
+    val unassessedStudentNames: List<String> = emptyList(),
+    val isSyncing: Boolean = false,
+    val showClassPicker: Boolean = false
 )
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
@@ -39,25 +45,30 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun loadData() {
-        viewModelScope.launch {
-            // Load user session profile
-            val session = tokenManager.sessionState.value
-            _uiState.value = _uiState.value.copy(
-                teacherName = session.fullName ?: "Guru SiapAjar",
-                schoolName = session.schoolName ?: "TK / RA SiapAjar"
-            )
+        // 1. Load user session profile
+        val session = tokenManager.sessionState.value
+        _uiState.value = _uiState.value.copy(
+            teacherName = session.fullName ?: "Bapak/Ibu Guru",
+            schoolName = session.schoolName ?: "SiapAjar"
+        )
 
-            // Fetch active classes & today's agenda from API
+        // 2. Fetch classes & agenda asynchronously
+        viewModelScope.launch {
             try {
                 val classes = studentRepo.fetchClasses()
                 if (classes.isNotEmpty()) {
-                    val activeClass = classes.first()
-                    val displayName = activeClass.displayName ?: activeClass.name
-                    _uiState.value = _uiState.value.copy(activeClassName = displayName)
+                    val first = classes.first()
+                    _uiState.value = _uiState.value.copy(
+                        availableClasses = classes,
+                        activeClassId = first.id,
+                        activeClassName = first.displayName ?: first.name
+                    )
                 }
+            } catch (_: Exception) {}
 
-                val agendaDto = studentRepo.fetchTodayAgenda("1")
-                if (agendaDto != null) {
+            try {
+                val agendaDto = studentRepo.fetchTodayAgenda(_uiState.value.activeClassId)
+                if (agendaDto != null && agendaDto.topicTitle.isNotBlank()) {
                     _uiState.value = _uiState.value.copy(
                         todayAgenda = TodayAgenda(
                             weekNumber = agendaDto.weekNumber,
@@ -88,15 +99,41 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             } catch (_: Exception) {}
         }
 
-        // Collect assessments from Room DB
+        // 3. Collect local assessments and students
         viewModelScope.launch {
-            assessmentRepo.getAllAssessments().collect { list ->
+            combine(
+                studentRepo.getStudentsByClass(_uiState.value.activeClassId),
+                assessmentRepo.getAllAssessments()
+            ) { students, assessments ->
+                val total = students.size
+                val assessedStudents = students.filter { s -> assessments.any { it.studentIds.contains(s.id) } }
+                val unassessedList = students.filter { s -> assessments.none { it.studentIds.contains(s.id) } }.map { it.name }
+                val assessedCount = assessedStudents.size
+
                 _uiState.value = _uiState.value.copy(
-                    recentAssessments = list.take(5),
-                    totalRecordedToday = if (list.isNotEmpty()) list.size else 18
+                    totalStudents = total,
+                    totalRecordedToday = assessedCount,
+                    presentCount = assessedCount,
+                    unrecordedCount = (total - assessedCount).coerceAtLeast(0),
+                    unassessedStudentNames = unassessedList,
+                    recentAssessments = assessments.take(5)
                 )
-            }
+            }.collect {}
         }
+    }
+
+    fun selectClass(classItem: id.siapajar.app.data.remote.ClassDto) {
+        val displayName = classItem.displayName ?: classItem.name
+        _uiState.value = _uiState.value.copy(
+            activeClassId = classItem.id,
+            activeClassName = displayName,
+            showClassPicker = false
+        )
+        loadData()
+    }
+
+    fun setShowClassPicker(show: Boolean) {
+        _uiState.value = _uiState.value.copy(showClassPicker = show)
     }
 
     fun logout(onLoggedOut: () -> Unit) {
