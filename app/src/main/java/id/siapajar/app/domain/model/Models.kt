@@ -64,14 +64,14 @@ data class CoreActivity(
 )
 
 data class TodayAgenda(
-    val weekNumber: Int = 2,
+    val weekNumber: Int = 1,
     val semesterNumber: Int = 1,
-    val topicTitle: String = "Aku Cinta Indonesia: Negeri Seribu Pulau",
-    val subTopic: String = "Tanah Air / Indonesia (Fase Fondasi - TK B 5-6 Tahun)",
-    val todayActivity: String = "Membuat Lukisan Burung Garuda dengan Teknik Percikan",
-    val targetedTpCode: String = "TP 1.3",
-    val targetedTpTitle: String = "Menjaga Kebersihan & Mengenal Simbol Negara",
-    val stage: String = "MEMAHAMI (BERKESADARAN, BERMAKNA)",
+    val topicTitle: String = "",
+    val subTopic: String = "",
+    val todayActivity: String = "",
+    val targetedTpCode: String = "",
+    val targetedTpTitle: String = "",
+    val stage: String = "",
     val openingActivities: List<String> = emptyList(),
     val openingQuestions: List<String> = emptyList(),
     val coreActivities: List<CoreActivity> = emptyList(),

@@ -93,6 +93,8 @@ data class StudentTimelineDto(
     val notes: String? = null,
     val achievementStatus: String? = null,
     val tpCode: String? = null,
+    val weekNumber: Int = 1,
+    val semesterNumber: Int = 1,
     val attachments: List<AttachmentDto> = emptyList()
 )
 

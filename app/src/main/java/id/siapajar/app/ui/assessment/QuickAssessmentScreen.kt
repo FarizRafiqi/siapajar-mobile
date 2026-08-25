@@ -46,6 +46,9 @@ import id.siapajar.app.ui.components.StudentAvatar
 import java.io.File
 import java.io.FileOutputStream
 
+import id.siapajar.app.util.ImageCompressor
+import kotlinx.coroutines.launch
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuickAssessmentScreen(
@@ -57,6 +60,7 @@ fun QuickAssessmentScreen(
     val uiState by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     var showStudentPicker by remember { mutableStateOf(false) }
 
     // State for Camera Capture File & Uri
@@ -66,7 +70,10 @@ fun QuickAssessmentScreen(
         contract = ActivityResultContracts.TakePicture()
     ) { isSuccess ->
         if (isSuccess && currentPhotoFile != null && currentPhotoFile!!.exists() && currentPhotoFile!!.length() > 0) {
-            viewModel.setPhotoPath(currentPhotoFile!!.absolutePath)
+            coroutineScope.launch {
+                val compressed = ImageCompressor.compressFile(context, currentPhotoFile!!)
+                viewModel.setPhotoPath(compressed.absolutePath)
+            }
         }
     }
 
@@ -92,17 +99,9 @@ fun QuickAssessmentScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
-            try {
-                val photosDir = File(context.cacheDir, "photos").apply { mkdirs() }
-                val targetFile = File(photosDir, "gallery_${System.currentTimeMillis()}.jpg")
-                context.contentResolver.openInputStream(uri)?.use { input ->
-                    FileOutputStream(targetFile).use { output ->
-                        input.copyTo(output)
-                    }
-                }
-                viewModel.setPhotoPath(targetFile.absolutePath)
-            } catch (_: Exception) {
-                viewModel.setPhotoPath(uri.toString())
+            coroutineScope.launch {
+                val compressed = ImageCompressor.compressUri(context, uri)
+                viewModel.setPhotoPath(compressed.absolutePath)
             }
         }
     }

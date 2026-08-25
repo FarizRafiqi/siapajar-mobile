@@ -81,6 +81,12 @@ class TokenManager(context: Context) {
     }
 
 
+    fun savePhotoQuality(quality: String) {
+        prefs.edit().putString(KEY_PHOTO_QUALITY, quality).apply()
+    }
+
+    fun getPhotoQuality(): String = prefs.getString(KEY_PHOTO_QUALITY, DEFAULT_PHOTO_QUALITY) ?: DEFAULT_PHOTO_QUALITY
+
     companion object {
         private const val KEY_TOKEN = "auth_token"
         private const val KEY_FULL_NAME = "user_full_name"
@@ -89,6 +95,9 @@ class TokenManager(context: Context) {
         private const val KEY_EDUCATION_LEVEL = "user_education_level"
         private const val KEY_ROLE = "user_role"
         private const val KEY_BASE_URL = "server_base_url"
+        private const val KEY_PHOTO_QUALITY = "photo_compression_quality"
+
+        const val DEFAULT_PHOTO_QUALITY = "Kompresi Cepat"
 
         // Default URL dynamically loaded from BuildConfig (Debug: localhost/10.0.2.2, Release: Production URL)
         val DEFAULT_BASE_URL: String = BuildConfig.BASE_URL

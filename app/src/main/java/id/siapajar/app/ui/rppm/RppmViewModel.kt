@@ -35,7 +35,7 @@ class RppmViewModel(application: Application) : AndroidViewModel(application) {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             try {
                 val dto = studentRepo.fetchTodayAgenda(classId)
-                if (dto != null) {
+                if (dto != null && dto.topicTitle.isNotBlank()) {
                     val coreList = dto.coreActivities.map {
                         CoreActivity(
                             id = it.id,
@@ -66,11 +66,15 @@ class RppmViewModel(application: Application) : AndroidViewModel(application) {
                         agenda = agenda
                     )
                 } else {
-                    _uiState.value = _uiState.value.copy(isLoading = false)
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        agenda = null
+                    )
                 }
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
+                    agenda = null,
                     errorMessage = e.localizedMessage
                 )
             }
@@ -81,3 +85,4 @@ class RppmViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.value = _uiState.value.copy(selectedActivityIndex = index)
     }
 }
+

@@ -152,14 +152,26 @@ fun StudentDetailScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // 2. Horizontal Filter Chips
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // 2. Two-Tier Filter System
+                // Level 1: Week Selector (Semua Minggu, Minggu 1..18)
+                Text(
+                    text = "Filter Minggu Belajar",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextSecondary
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                val weekOptions = listOf(0) + (1..18).toList()
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(filterOptions) { option ->
-                        val isSelected = option == uiState.selectedFilter
+                    items(weekOptions) { weekNum ->
+                        val isSelected = weekNum == uiState.selectedWeek
+                        val label = if (weekNum == 0) "Semua Minggu" else "Minggu $weekNum"
                         Surface(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(20.dp))
-                                .clickable { viewModel.setFilter(option) }
+                                .clickable { viewModel.setWeekFilter(weekNum) }
                                 .border(
                                     width = 1.dp,
                                     color = if (isSelected) EmeraldPrimary else BorderSlate,
@@ -168,11 +180,39 @@ fun StudentDetailScreen(
                             color = if (isSelected) EmeraldPrimary else CardSurface
                         ) {
                             Text(
-                                text = option,
-                                fontSize = 13.sp,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                text = label,
+                                fontSize = 12.sp,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
                                 color = if (isSelected) Color.White else TextPrimary,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Level 2: Instrument Type (Semua, Catatan Anekdot, Hasil Karya, Foto Berseri)
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(filterOptions) { option ->
+                        val isSelected = option == uiState.selectedFilter
+                        Surface(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(16.dp))
+                                .clickable { viewModel.setFilter(option) }
+                                .border(
+                                    width = 1.dp,
+                                    color = if (isSelected) EmeraldPrimary else BorderSlate,
+                                    shape = RoundedCornerShape(16.dp)
+                                ),
+                            color = if (isSelected) MintSurface else CardSurface
+                        ) {
+                            Text(
+                                text = option,
+                                fontSize = 12.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) EmeraldDark else TextSecondary,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
                             )
                         }
                     }
@@ -181,47 +221,91 @@ fun StudentDetailScreen(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 // 3. Section Title
-                Text(
-                    text = "Linimasa Asesmen & Capaian (${uiState.totalAssessments} Catatan)",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Linimasa Asesmen & Capaian",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = "${uiState.filteredTimeline.size} Catatan",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = EmeraldPrimary
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
-            // Timeline items
-            if (uiState.timeline.isEmpty()) {
-                // Fallback default timeline preview
+            // Timeline items or Strict Empty State (Zero Dummy Rule)
+            if (uiState.filteredTimeline.isEmpty()) {
                 item {
-                    TimelineItemCard(
-                        type = "Hasil Karya",
-                        badgeColor = EmeraldPrimary,
-                        dotColor = EmeraldPrimary,
-                        photoUrl = "https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=600&auto=format&fit=crop&q=80",
-                        notes = "Mampu menggunting pola lingkaran dengan rapi dan bercerita tentang karyanya.",
-                        tpText = "TP 3.1 - Motorik Halus & Kreativitas"
-                    )
-                    Spacer(modifier = Modifier.height(14.dp))
-                    TimelineItemCard(
-                        type = "Catatan Anekdot",
-                        badgeColor = Color(0xFF2563EB),
-                        dotColor = Color(0xFF2563EB),
-                        photoUrl = null,
-                        notes = "Saat waktu bermain bebas, anak aktif mengajak temannya menyusun balok bersama dan membagi peran membangun menara tinggi.",
-                        tpText = "TP 2.2 - Sosial Emosional & Kolaborasi"
-                    )
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        color = CardSurface,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderSlate)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AssignmentLate,
+                                contentDescription = null,
+                                tint = TextSecondary.copy(alpha = 0.6f),
+                                modifier = Modifier.size(44.dp)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = if (uiState.selectedWeek > 0) {
+                                    "Belum ada catatan untuk Minggu ${uiState.selectedWeek}"
+                                } else {
+                                    "Belum ada catatan asesmen tersimpan"
+                                },
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Gunakan tombol Tambah Catatan di bawah untuk mulai mendokumentasikan observasi perkembangan siswa.",
+                                fontSize = 12.sp,
+                                color = TextSecondary,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                lineHeight = 17.sp
+                            )
+                        }
+                    }
                 }
             } else {
-                items(uiState.timeline) { item ->
+                items(uiState.filteredTimeline) { item ->
                     val isWorkSample = item.instrumentType.contains("work", ignoreCase = true) || item.instrumentType.contains("karya", ignoreCase = true)
+                    val isPhotoSeries = item.instrumentType.contains("photo", ignoreCase = true) || item.instrumentType.contains("foto", ignoreCase = true)
+                    val badgeColor = when {
+                        isWorkSample -> EmeraldPrimary
+                        isPhotoSeries -> Color(0xFF8B5CF6)
+                        else -> Color(0xFF2563EB)
+                    }
+
                     TimelineItemCard(
                         type = item.instrumentTitle,
-                        badgeColor = if (isWorkSample) EmeraldPrimary else Color(0xFF2563EB),
-                        dotColor = if (isWorkSample) EmeraldPrimary else Color(0xFF2563EB),
+                        badgeColor = badgeColor,
+                        dotColor = badgeColor,
+                        weekText = "Minggu ${item.weekNumber} • Semester ${item.semesterNumber}",
+                        dateText = item.dateText,
                         photoUrl = item.attachments.firstOrNull()?.url,
-                        notes = item.notes ?: item.activity ?: "Observasi pembelajaran harian.",
+                        notes = item.notes ?: item.activity ?: "Observasi perkembangan anak.",
                         tpText = item.tpCode ?: "TP 1.3 - Capaian Pembelajaran"
                     )
                     Spacer(modifier = Modifier.height(14.dp))
@@ -236,6 +320,8 @@ private fun TimelineItemCard(
     type: String,
     badgeColor: Color,
     dotColor: Color,
+    weekText: String,
+    dateText: String,
     photoUrl: String?,
     notes: String,
     tpText: String
@@ -290,17 +376,20 @@ private fun TimelineItemCard(
                         )
                     }
 
-                    IconButton(
-                        onClick = {},
-                        modifier = Modifier.size(24.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = null,
-                            tint = TextMuted
-                        )
-                    }
+                    Text(
+                        text = weekText,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextSecondary
+                    )
                 }
+
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = dateText,
+                    fontSize = 11.sp,
+                    color = TextSecondary.copy(alpha = 0.8f)
+                )
 
                 if (photoUrl != null) {
                     Spacer(modifier = Modifier.height(10.dp))

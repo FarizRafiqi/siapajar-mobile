@@ -36,8 +36,10 @@ data class StudentDetailUiState(
     val ageText: String = "5-6 Tahun",
     val avatarUrl: String? = null,
     val totalAssessments: Int = 0,
+    val selectedWeek: Int = 0, // 0 = Semua Minggu, 1..18
     val selectedFilter: String = "Semua",
     val timeline: List<StudentTimelineDto> = emptyList(),
+    val filteredTimeline: List<StudentTimelineDto> = emptyList(),
     val isLoading: Boolean = false
 )
 
@@ -57,25 +59,8 @@ class StudentViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun loadStudents(classId: String = "1") {
+        // 1. Immediately observe local Room database (Instant 0ms render)
         viewModelScope.launch {
-            _listState.value = _listState.value.copy(isLoading = true)
-
-            // 1. Fetch classes to get proper display name
-            try {
-                val classes = studentRepo.fetchClasses()
-                val activeClass = classes.find { it.id == classId } ?: classes.firstOrNull()
-                if (activeClass != null) {
-                    val displayName = activeClass.displayName ?: activeClass.name
-                    _listState.value = _listState.value.copy(className = displayName)
-                }
-            } catch (_: Exception) {}
-
-            // 2. Sync fresh student list from API to Room
-            try {
-                studentRepo.fetchStudentsFromApi(classId)
-            } catch (_: Exception) {}
-
-            // 3. Observe local Room database students & local assessments
             combine(
                 studentRepo.getStudentsByClass(classId),
                 assessmentRepo.getAllAssessments()
@@ -85,7 +70,7 @@ class StudentViewModel(application: Application) : AndroidViewModel(application)
                         _listState.value = _listState.value.copy(className = name)
                     }
                 }
-                val items = studentEntities.map { student ->
+                studentEntities.map { student ->
                     val count = allAssessments.count { it.studentIds.contains(student.id) }
                     StudentListItem(
                         id = student.id,
@@ -97,7 +82,6 @@ class StudentViewModel(application: Application) : AndroidViewModel(application)
                         lastAssessmentDate = if (count > 0) "Tercatat" else "Belum ada"
                     )
                 }
-                items
             }.collect { items ->
                 _listState.value = _listState.value.copy(
                     students = items,
@@ -105,6 +89,22 @@ class StudentViewModel(application: Application) : AndroidViewModel(application)
                     isLoading = false
                 )
             }
+        }
+
+        // 2. Background sync (Parallel, non-blocking)
+        viewModelScope.launch {
+            try {
+                val classes = studentRepo.fetchClasses()
+                val activeClass = classes.find { it.id == classId } ?: classes.firstOrNull()
+                if (activeClass != null) {
+                    val displayName = activeClass.displayName ?: activeClass.name
+                    _listState.value = _listState.value.copy(className = displayName)
+                }
+            } catch (_: Exception) {}
+
+            try {
+                studentRepo.fetchStudentsFromApi(classId)
+            } catch (_: Exception) {}
         }
     }
 
@@ -130,8 +130,7 @@ class StudentViewModel(application: Application) : AndroidViewModel(application)
                 emptyList()
             }
 
-            // 3. Collect local assessments for this student
-            assessmentRepo.getAssessmentsForStudent(studentId).firstOrNull()
+            val filtered = applyFilters(apiTimeline, _detailState.value.selectedWeek, _detailState.value.selectedFilter)
 
             _detailState.value = _detailState.value.copy(
                 id = studentId,
@@ -140,13 +139,48 @@ class StudentViewModel(application: Application) : AndroidViewModel(application)
                 classText = classText,
                 avatarUrl = avatar,
                 timeline = apiTimeline,
-                totalAssessments = if (apiTimeline.isNotEmpty()) apiTimeline.size else 0,
+                filteredTimeline = filtered,
+                totalAssessments = apiTimeline.size,
                 isLoading = false
             )
         }
     }
 
+    fun setWeekFilter(week: Int) {
+        val currentTimeline = _detailState.value.timeline
+        val currentFilter = _detailState.value.selectedFilter
+        val filtered = applyFilters(currentTimeline, week, currentFilter)
+        _detailState.value = _detailState.value.copy(
+            selectedWeek = week,
+            filteredTimeline = filtered
+        )
+    }
+
     fun setFilter(filterName: String) {
-        _detailState.value = _detailState.value.copy(selectedFilter = filterName)
+        val currentTimeline = _detailState.value.timeline
+        val currentWeek = _detailState.value.selectedWeek
+        val filtered = applyFilters(currentTimeline, currentWeek, filterName)
+        _detailState.value = _detailState.value.copy(
+            selectedFilter = filterName,
+            filteredTimeline = filtered
+        )
+    }
+
+    private fun applyFilters(
+        items: List<StudentTimelineDto>,
+        week: Int,
+        instrumentFilter: String
+    ): List<StudentTimelineDto> {
+        return items.filter { item ->
+            val matchWeek = if (week == 0) true else item.weekNumber == week
+            val matchInstrument = when (instrumentFilter) {
+                "Semua" -> true
+                "Catatan Anekdot" -> item.instrumentType.contains("anecdot", ignoreCase = true) || item.instrumentTitle.contains("anekdot", ignoreCase = true)
+                "Hasil Karya" -> item.instrumentType.contains("work", ignoreCase = true) || item.instrumentTitle.contains("karya", ignoreCase = true)
+                "Foto Berseri" -> item.instrumentType.contains("photo", ignoreCase = true) || item.instrumentTitle.contains("foto", ignoreCase = true)
+                else -> true
+            }
+            matchWeek && matchInstrument
+        }
     }
 }
