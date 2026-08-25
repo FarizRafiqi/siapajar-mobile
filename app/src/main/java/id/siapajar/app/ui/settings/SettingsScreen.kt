@@ -1,6 +1,10 @@
 package id.siapajar.app.ui.settings
 
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -39,7 +43,14 @@ fun SettingsScreen(
     val scrollState = rememberScrollState()
     val context = LocalContext.current
     var showLogoutDialog by remember { mutableStateOf(false) }
-    var serverUrlInput by remember { mutableStateOf(uiState.serverBaseUrl) }
+    var showSupportDialog by remember { mutableStateOf(false) }
+
+    // Image Picker for Profile Photo
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { viewModel.updateProfilePhoto(it.toString()) }
+    }
 
     LaunchedEffect(uiState.toastMessage) {
         uiState.toastMessage?.let {
@@ -48,116 +59,73 @@ fun SettingsScreen(
         }
     }
 
-    // Dialog Konfigurasi Server URL
-    if (uiState.showServerUrlDialog) {
-        AlertDialog(
-            onDismissRequest = { viewModel.setShowServerUrlDialog(false) },
-            title = { Text("Konfigurasi Server API", fontWeight = FontWeight.Bold, color = TextPrimary) },
-            text = {
-                Column {
-                    Text(
-                        "Masukkan alamat server backend SiapAjar:",
-                        fontSize = 13.sp,
-                        color = TextSecondary,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    OutlinedTextField(
-                        value = serverUrlInput,
-                        onValueChange = { serverUrlInput = it },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        viewModel.updateServerUrl(serverUrlInput)
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
-                ) {
-                    Text("Simpan")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.setShowServerUrlDialog(false) }) {
-                    Text("Batal", color = TextSecondary)
-                }
-            }
-        )
-    }
-
-    // Modal Bottom Sheet Pilih Kelas Aktif
-    if (uiState.showClassPicker) {
+    // Modal Bottom Sheet Pilih Kualitas Foto
+    if (uiState.showPhotoQualityDialog) {
         ModalBottomSheet(
-            onDismissRequest = { viewModel.setShowClassPicker(false) },
+            onDismissRequest = { viewModel.setShowPhotoQualityDialog(false) },
             containerColor = CardSurface,
-            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            dragHandle = { BottomSheetDefaults.DragHandle() }
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
-                    .padding(bottom = 32.dp)
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 36.dp)
             ) {
                 Text(
-                    text = "Pilih Kelas Binaan",
+                    text = "Pilih Kualitas Foto",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
                 )
                 Text(
-                    text = "Pilih rombel/kelompok aktif untuk mengajar dan asesmen",
+                    text = "Sesuaikan kompresi foto dokumentasi dan hasil karya siswa",
                     fontSize = 13.sp,
                     color = TextSecondary,
                     modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
                 )
 
-                val classList = if (uiState.availableClasses.isNotEmpty()) {
-                    uiState.availableClasses
-                } else {
-                    listOf(
-                        id.siapajar.app.data.remote.ClassDto(id = "1", name = "TK B1", displayName = "TK B1 (Al-Kautsar)"),
-                        id.siapajar.app.data.remote.ClassDto(id = "2", name = "TK B2", displayName = "TK B2 (Al-Fath)"),
-                        id.siapajar.app.data.remote.ClassDto(id = "3", name = "TK A", displayName = "TK A (An-Nur)")
-                    )
-                }
+                val qualityOptions = listOf(
+                    Triple("Kompresi Cepat", "Unggah kilat, sangat hemat kuota data (Rekomendasi)", "1"),
+                    Triple("Standar HD", "Keseimbangan detail foto karya dan ketajaman teks", "2"),
+                    Triple("Kualitas Asli", "Resolusi penuh tanpa kompresi (Ukuran file lebih besar)", "3")
+                )
 
-                classList.forEach { classDto ->
-                    val displayName = classDto.displayName ?: classDto.name
-                    val isSelected = displayName == uiState.activeClassName
+                qualityOptions.forEach { (title, description, _) ->
+                    val isSelected = uiState.photoCompressionQuality == title
 
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { viewModel.selectClass(classDto) },
+                            .padding(vertical = 5.dp),
+                        shape = RoundedCornerShape(14.dp),
                         color = if (isSelected) MintSurface else CanvasBackground,
                         border = androidx.compose.foundation.BorderStroke(
                             1.dp,
                             if (isSelected) EmeraldPrimary else BorderSlate
-                        )
+                        ),
+                        onClick = { viewModel.setPhotoQuality(title) }
                     ) {
                         Row(
-                            modifier = Modifier.padding(14.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.School,
-                                    contentDescription = null,
-                                    tint = if (isSelected) EmeraldPrimary else TextSecondary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = displayName,
+                                    text = title,
                                     fontSize = 14.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
                                     color = if (isSelected) EmeraldDark else TextPrimary
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = description,
+                                    fontSize = 12.sp,
+                                    color = TextSecondary
                                 )
                             }
                             if (isSelected) {
@@ -173,6 +141,211 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+
+    // Modal Bottom Sheet Pilih Kelas Aktif
+    if (uiState.showClassPicker) {
+        ModalBottomSheet(
+            onDismissRequest = { viewModel.setShowClassPicker(false) },
+            containerColor = CardSurface,
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            dragHandle = { BottomSheetDefaults.DragHandle() }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 36.dp)
+            ) {
+                Text(
+                    text = "Pilih Kelas Binaan",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+                Text(
+                    text = "Pilih rombel/kelompok aktif untuk mengajar dan asesmen",
+                    fontSize = 13.sp,
+                    color = TextSecondary,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 16.dp)
+                )
+
+                if (uiState.availableClasses.isEmpty()) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        color = CanvasBackground,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderSlate)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SearchOff,
+                                contentDescription = null,
+                                tint = TextSecondary.copy(alpha = 0.6f),
+                                modifier = Modifier.size(32.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Tidak ada data kelas tersedia",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = "Data kelas akan muncul otomatis saat terdaftar.",
+                                fontSize = 12.sp,
+                                color = TextSecondary
+                            )
+                        }
+                    }
+                } else {
+                    uiState.availableClasses.forEach { classDto ->
+                        val displayName = classDto.displayName ?: classDto.name
+                        val isSelected = displayName == uiState.activeClassName
+
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 5.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (isSelected) MintSurface else CanvasBackground,
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (isSelected) EmeraldPrimary else BorderSlate
+                            ),
+                            onClick = { viewModel.selectClass(classDto) }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.School,
+                                        contentDescription = null,
+                                        tint = if (isSelected) EmeraldPrimary else TextSecondary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Text(
+                                        text = displayName,
+                                        fontSize = 14.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSelected) EmeraldDark else TextPrimary
+                                    )
+                                }
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = null,
+                                        tint = EmeraldPrimary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Dialog Bantuan & Dukungan Pelanggan
+    if (showSupportDialog) {
+        AlertDialog(
+            onDismissRequest = { showSupportDialog = false },
+            title = { Text("Hubungi Bantuan SiapAjar", fontWeight = FontWeight.Bold, color = TextPrimary) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Butuh panduan atau mengalami kendala teknis? Tim dukungan SiapAjar siap membantu Anda.",
+                        fontSize = 13.sp,
+                        color = TextSecondary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showSupportDialog = false
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/6281234567890?text=Halo%20Admin%20SiapAjar,%20saya%20membutuhkan%20bantuan%20terkait%20aplikasi."))
+                                context.startActivity(intent)
+                            },
+                        shape = RoundedCornerShape(12.dp),
+                        color = MintSurface,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, EmeraldPrimary.copy(alpha = 0.5f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Chat,
+                                contentDescription = null,
+                                tint = EmeraldDark,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text("WhatsApp Bantuan", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = EmeraldDark)
+                                Text("Respon cepat Senin - Sabtu 08:00 - 17:00", fontSize = 11.sp, color = TextSecondary)
+                            }
+                        }
+                    }
+
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                showSupportDialog = false
+                                val intent = Intent(Intent.ACTION_SENDTO).apply {
+                                    data = Uri.parse("mailto:bantuan@siapajar.id")
+                                    putExtra(Intent.EXTRA_SUBJECT, "Pertanyaan/Bantuan SiapAjar Mobile")
+                                }
+                                context.startActivity(intent)
+                            },
+                        shape = RoundedCornerShape(12.dp),
+                        color = CanvasBackground,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, BorderSlate)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Email,
+                                contentDescription = null,
+                                tint = TextSecondary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text("Email Dukungan", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                                Text("bantuan@siapajar.id", fontSize = 11.sp, color = TextSecondary)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showSupportDialog = false }) {
+                    Text("Tutup", color = EmeraldPrimary, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
     }
 
     // Dialog Konfirmasi Keluar
@@ -233,7 +406,7 @@ fun SettingsScreen(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. Profil Guru & Sekolah Card
+            // 1. Profil Guru & Sekolah Card (With Avatar Change Option)
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -245,22 +418,49 @@ fun SettingsScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Profile Avatar with online teacher picture
+                    // Profile Avatar with Clickable Camera Badge
                     Box(
                         modifier = Modifier
-                            .size(60.dp)
-                            .clip(CircleShape)
-                            .background(MintSurface)
-                            .border(2.dp, EmeraldPrimary.copy(alpha = 0.3f), CircleShape),
+                            .size(68.dp)
+                            .clickable { photoPickerLauncher.launch("image/*") },
                         contentAlignment = Alignment.Center
                     ) {
-                        AsyncImage(
-                            model = "https://lh3.googleusercontent.com/aida-public/AB6AXuBK8O0sZW8ZPCPJQTXBZ8cp69raXK6p1zZ0_8wvN7bvYgZIkXe6dVupAXLge7lQcrib8RDb4mJCF7qx2s8t6B4JrQGiw3dsIK9Y6sLQzJfp8WwWl39P2EbTQsDw6SbDDvY6FYesyx23UCTotLGVRXY8Z1TqdO5xDKWDgoFgPRrPyFJKxpjua8wwK7uIL4DCAylqi7V9sbL4mu-pJ6n5PMlCsnFWxpAFcZLpUwD_1dHy963xYgwIm9q36nSzh2dP1yFf9uHi04sSPPo",
-                            contentDescription = "Avatar Guru",
+                        Box(
                             modifier = Modifier
-                                .fillMaxSize()
+                                .size(64.dp)
                                 .clip(CircleShape)
-                        )
+                                .background(MintSurface)
+                                .border(2.dp, EmeraldPrimary.copy(alpha = 0.3f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            AsyncImage(
+                                model = uiState.profilePhotoUri
+                                    ?: "https://lh3.googleusercontent.com/aida-public/AB6AXuBK8O0sZW8ZPCPJQTXBZ8cp69raXK6p1zZ0_8wvN7bvYgZIkXe6dVupAXLge7lQcrib8RDb4mJCF7qx2s8t6B4JrQGiw3dsIK9Y6sLQzJfp8WwWl39P2EbTQsDw6SbDDvY6FYesyx23UCTotLGVRXY8Z1TqdO5xDKWDgoFgPRrPyFJKxpjua8wwK7uIL4DCAylqi7V9sbL4mu-pJ6n5PMlCsnFWxpAFcZLpUwD_1dHy963xYgwIm9q36nSzh2dP1yFf9uHi04sSPPo",
+                                contentDescription = "Avatar Guru",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape)
+                            )
+                        }
+
+                        // Small Camera Badge
+                        Surface(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .align(Alignment.BottomEnd),
+                            shape = CircleShape,
+                            color = EmeraldPrimary,
+                            border = androidx.compose.foundation.BorderStroke(2.dp, CardSurface)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.CameraAlt,
+                                    contentDescription = "Ganti Foto",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.width(14.dp))
@@ -318,7 +518,7 @@ fun SettingsScreen(
             }
 
             // 2. Pengaturan Kelas & Pembelajaran
-            SettingsSectionCard(title = "Pengaturan Kelas & Mengajar") {
+            SettingsSectionCard(title = "Pengaturan Kelas") {
                 SettingsClickableItem(
                     icon = Icons.Outlined.School,
                     title = "Pilihan Kelas Aktif",
@@ -328,101 +528,104 @@ fun SettingsScreen(
                 HorizontalDivider(color = BorderSlate)
                 SettingsInfoItem(
                     icon = Icons.Outlined.DateRange,
-                    title = "Tahun Ajaran & Semester",
+                    title = "Tahun Ajaran / Semester",
                     value = uiState.academicYear
-                )
-                HorizontalDivider(color = BorderSlate)
-                SettingsInfoItem(
-                    icon = Icons.Outlined.AutoStories,
-                    title = "Kurikulum Pembelajaran",
-                    value = "Kurikulum Merdeka (PAUD/TK)"
                 )
             }
 
             // 3. Sinkronisasi & Data Offline
-            SettingsSectionCard(title = "Sinkronisasi & Data Offline") {
-                Row(
+            SettingsSectionCard(title = "Sinkronisasi & Penyimpanan") {
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(14.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MintSurface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, EmeraldPrimary.copy(alpha = 0.35f))
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.CloudDone,
-                                contentDescription = null,
-                                tint = EmeraldPrimary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = EmeraldDark,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
                             Text(
                                 text = "Status Sinkronisasi",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = EmeraldDark
+                            )
+                            Text(
+                                text = uiState.syncStatusText,
+                                fontSize = 12.sp,
                                 color = TextPrimary
                             )
                         }
-                        Text(
-                            text = uiState.syncStatusText,
-                            fontSize = 12.sp,
-                            color = TextSecondary,
-                            modifier = Modifier.padding(top = 2.dp)
-                        )
-                    }
-
-                    Button(
-                        onClick = { viewModel.triggerManualSync() },
-                        enabled = !uiState.isSyncing,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MintSurface,
-                            contentColor = EmeraldDark
-                        ),
-                        shape = RoundedCornerShape(10.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        if (uiState.isSyncing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(14.dp),
-                                color = EmeraldDark,
-                                strokeWidth = 2.dp
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                        }
-                        Text(
-                            text = if (uiState.isSyncing) "Menyinkron..." else "Sinkron Sekarang",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
                     }
                 }
 
-                HorizontalDivider(color = BorderSlate)
-
-                SettingsInfoItem(
-                    icon = Icons.Outlined.FolderZip,
-                    title = "Penyimpanan Offline Lokal",
-                    value = uiState.offlineStorageText
+                Text(
+                    text = "Penyimpanan Offline: ${uiState.offlineStorageText}",
+                    fontSize = 12.sp,
+                    color = TextSecondary,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
                 )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Button(
+                    onClick = { viewModel.triggerManualSync() },
+                    enabled = !uiState.isSyncing,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 14.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MintSurface,
+                        contentColor = EmeraldDark
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(vertical = 12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, EmeraldPrimary.copy(alpha = 0.4f))
+                ) {
+                    if (uiState.isSyncing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            color = EmeraldDark,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Sync,
+                            contentDescription = null,
+                            tint = EmeraldDark,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    Text(
+                        text = if (uiState.isSyncing) "Menyinkronkan Data..." else "Sinkronisasi Sekarang",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = EmeraldDark
+                    )
+                }
             }
 
-            // 4. Preferensi & Jaringan Server
-            SettingsSectionCard(title = "Preferensi & Jaringan") {
+            // 4. Preferensi Aplikasi (Wording Kualitas Foto ringkas & Klik)
+            SettingsSectionCard(title = "Preferensi Aplikasi") {
                 SettingsClickableItem(
-                    icon = Icons.Outlined.Dns,
-                    title = "Alamat Server API",
-                    value = uiState.serverBaseUrl,
-                    onClick = {
-                        serverUrlInput = uiState.serverBaseUrl
-                        viewModel.setShowServerUrlDialog(true)
-                    }
-                )
-                HorizontalDivider(color = BorderSlate)
-                SettingsInfoItem(
                     icon = Icons.Outlined.PhotoCamera,
-                    title = "Kualitas Kompresi Foto Asesmen",
-                    value = uiState.photoCompressionQuality
+                    title = "Kualitas Foto",
+                    value = uiState.photoCompressionQuality,
+                    onClick = { viewModel.setShowPhotoQualityDialog(true) }
                 )
                 HorizontalDivider(color = BorderSlate)
                 Row(
@@ -442,15 +645,15 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "Pengingat Presensi Harian",
+                                text = "Notifikasi Presensi",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = TextPrimary
                             )
                             Text(
-                                text = "Notifikasi setiap jam 08:00 pagi",
+                                text = if (uiState.isAttendanceReminderEnabled) "Aktif" else "Nonaktif",
                                 fontSize = 12.sp,
-                                color = TextMuted
+                                color = TextSecondary
                             )
                         }
                     }
@@ -466,43 +669,68 @@ fun SettingsScreen(
                 }
             }
 
-            // 5. Informasi Aplikasi
-            SettingsSectionCard(title = "Tentang Aplikasi") {
+            // 5. Bantuan & Informasi (With Hubungi Bantuan Button)
+            SettingsSectionCard(title = "Bantuan & Informasi") {
                 SettingsInfoItem(
                     icon = Icons.Outlined.Info,
                     title = "Versi Aplikasi",
                     value = uiState.appVersion
                 )
                 HorizontalDivider(color = BorderSlate)
-                SettingsInfoItem(
-                    icon = Icons.Outlined.VerifiedUser,
-                    title = "Status Lisensi",
-                    value = "SiapAjar Cloud Active"
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showSupportDialog = true }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.SupportAgent,
+                        contentDescription = null,
+                        tint = EmeraldDark,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "Hubungi Bantuan",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = EmeraldDark
+                    )
+                }
             }
 
-            // 6. Tombol Logout (Merah)
-            Button(
-                onClick = { showLogoutDialog = true },
+            // 6. Tombol Logout (Merah Lembut & Elegan)
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
-                shape = RoundedCornerShape(14.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .clickable { showLogoutDialog = true },
+                shape = RoundedCornerShape(14.dp),
+                color = Color(0xFFFEE2E2).copy(alpha = 0.6f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFCA5A5).copy(alpha = 0.5f))
             ) {
-                Icon(
-                    imageVector = Icons.Default.Logout,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Keluar dari Akun",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Logout,
+                        contentDescription = null,
+                        tint = Color(0xFFDC2626),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Keluar dari Akun",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFDC2626)
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -515,22 +743,37 @@ private fun SettingsSectionCard(
     title: String,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Column {
-        Text(
-            text = title,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextSecondary,
-            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
-        )
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .border(1.dp, BorderSlate, RoundedCornerShape(16.dp)),
-            color = CardSurface
-        ) {
-            Column(content = content)
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, BorderSlate),
+        color = CardSurface
+    ) {
+        Column {
+            Row(
+                modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = when (title) {
+                        "Pengaturan Kelas" -> Icons.Default.School
+                        "Sinkronisasi & Penyimpanan" -> Icons.Default.CloudSync
+                        "Preferensi Aplikasi" -> Icons.Default.Tune
+                        else -> Icons.Default.Info
+                    },
+                    contentDescription = null,
+                    tint = EmeraldDark,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = title,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+            }
+            content()
         }
     }
 }
@@ -568,8 +811,8 @@ private fun SettingsClickableItem(
                 Text(
                     text = value,
                     fontSize = 12.sp,
-                    color = EmeraldPrimary,
-                    fontWeight = FontWeight.Medium
+                    color = TextSecondary,
+                    fontWeight = FontWeight.Normal
                 )
             }
         }
